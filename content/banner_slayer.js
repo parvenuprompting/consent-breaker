@@ -1,6 +1,6 @@
 /**
  * Consent Breaker - Banner Slayer
- * Mode-driven heuristics.
+ * V2: Mode-driven with reporting
  */
 
 const BannerSlayer = {
@@ -8,10 +8,9 @@ const BannerSlayer = {
     processed: new WeakSet(),
     mode: 'normal',
 
-    // Dynamic config based on mode
     config: {
         threshold: 60,
-        textWeightMax: 40, // percentage cap
+        textWeightMax: 40,
         retryLimit: 0
     },
 
@@ -33,9 +32,9 @@ const BannerSlayer = {
 
     configureMode() {
         if (this.mode === 'extreme') {
-            this.config.threshold = 40;  // Lower threshold
-            this.config.textWeightMax = 50; // Allow more text influence
-            this.config.retryLimit = 3; // Aggressive retries
+            this.config.threshold = 40;
+            this.config.textWeightMax = 50;
+            this.config.retryLimit = 3;
         } else {
             this.config.threshold = 60;
             this.config.textWeightMax = 40;
@@ -71,7 +70,9 @@ const BannerSlayer = {
         }
 
         // 3. Scroll unlock
-        if (DOM.hasScrollLock()) DOM.restoreScroll();
+        if (DOM.hasScrollLock()) {
+            DOM.restoreScroll();
+        }
     },
 
     async handleKnownCMPs() {
@@ -94,19 +95,18 @@ const BannerSlayer = {
                 if (btn && DOM.isVisible(btn)) {
                     DOM.safeClick(btn);
                     await this.sleep(500);
-                    // Check success
                     if (!DOM.isVisible(container)) {
                         DOM.restoreScroll();
+                        this.report('Banner Rejected', `Clicked reject on ${cmp.name}`);
                         return true;
                     }
                 }
             }
 
-            // If extreme mode OR normal fallback: close/hide
-            // In extreme mode, we don't wait for reject button failure to hide
             if (this.mode === 'extreme' || !this.signatures.tcf) {
                 DOM.hideElement(container);
                 DOM.restoreScroll();
+                this.report('Banner Removed', `Forced removal of ${cmp.name}`);
                 return true;
             }
         }
@@ -119,7 +119,7 @@ const BannerSlayer = {
         const selector = `
       [class*="cookie"], [class*="consent"], [class*="gdpr"], [class*="privacy"],
       [id*="cookie"], [id*="consent"], [id*="gdpr"], [role="dialog"], [role="alertdialog"]
-    `; // Simplified for performance
+    `;
 
         document.querySelectorAll(selector).forEach(el => {
             if (!DOM.isVisible(el) || this.processed.has(el)) return;
@@ -140,20 +140,15 @@ const BannerSlayer = {
         if (DOM.isOverlay(element)) score += 20;
         if (DOM.hasScrollLock()) score += 10;
 
-        // Text (Max capped)
+        // Text
         const text = (element.innerText || '').toLowerCase();
         let textScore = 0;
         const keywords = ['cookie', 'consent', 'accept', 'privacy', 'partner'];
         keywords.forEach(k => { if (text.includes(k)) textScore += 5; });
 
-        // Cap text score influence
-        // Total max score is roughly 100. weightMax is percentage roughly.
-        // If structural is 0, we shouldn't rely solely on text usually.
-        if (score < 10 && textScore > 0) textScore = 0; // Require SOME structure
+        if (score < 10 && textScore > 0) textScore = 0;
+        score += Math.min(textScore, 25);
 
-        score += Math.min(textScore, 25); // Hard cap 25 points from text
-
-        // Buttons
         if (element.querySelector('button, a[role="button"]')) score += 5;
 
         // Safeguards
@@ -168,35 +163,37 @@ const BannerSlayer = {
         const DOM = window.ConsentBreakerDOM;
         const el = cand.element;
 
-        // 1. Try Reject
         if (await this.tryRejectButton(el)) {
             await this.sleep(500);
-            if (!DOM.isVisible(el)) { DOM.restoreScroll(); return; }
+            if (!DOM.isVisible(el)) {
+                DOM.restoreScroll();
+                this.report('Banner Rejected', 'Clicked heuristic reject button');
+                return;
+            }
         }
 
-        // 2. Try Close
         if (await this.tryCloseButton(el)) {
             await this.sleep(500);
-            if (!DOM.isVisible(el)) { DOM.restoreScroll(); return; }
+            if (!DOM.isVisible(el)) {
+                DOM.restoreScroll();
+                this.report('Banner Closed', 'Clicked heuristic close button');
+                return;
+            }
         }
 
-        // 3. Extreme removal
         if (this.mode === 'extreme') {
             DOM.hideElement(el);
             DOM.restoreScroll();
-            this.log('Extreme removal applied');
+            this.report('Banner Removed', 'Extreme mode forced removal');
         } else {
-            // Normal mode: only hide if score is VERY high (certainty)
             if (cand.score > 80) {
                 DOM.hideElement(el);
+                this.report('Banner Removed', 'High confidence removal');
             }
         }
     },
 
     async tryRejectButton(container) {
-        // (Simplified logic reused from previous iteration via this method call)
-        // For brevity in this artifact, assuming improved logic or reusing previous method structure
-        // Re-implementing basic logic here for completeness as file is overwritten
         const DOM = window.ConsentBreakerDOM;
         const buttons = container.querySelectorAll('button, a, .btn');
         for (const btn of buttons) {
@@ -220,6 +217,13 @@ const BannerSlayer = {
             }
         }
         return false;
+    },
+
+    report(action, details) {
+        chrome.runtime.sendMessage({
+            type: 'REPORT_ACTION',
+            data: { action, details, domain: window.location.hostname }
+        }).catch(() => { });
     },
 
     observeDOM() {

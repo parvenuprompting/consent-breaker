@@ -1,119 +1,126 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html>
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Consent Breaker - Instellingen</title>
+  <title>Consent Breaker Options</title>
   <link rel="stylesheet" href="options.css">
 </head>
 
 <body>
   <div class="container">
-    <header>
-      <h1>🛡️ Consent Breaker</h1>
-      <p class="subtitle">Cookie consent banners automatisch weigeren</p>
-    </header>
+    <div class="sidebar">
+      <div class="logo">
+        <div class="icon-placeholder">🛡️</div>
+        <span>Consent Breaker</span>
+      </div>
 
-    <main>
-      <!-- Global Controls -->
-      <section class="card">
-        <h2>Global Settings</h2>
+      <div class="nav-item active">General</div>
+      <div class="nav-item">Allowlist</div>
+      <div class="nav-item">About</div>
+    </div>
 
-        <div class="setting-row">
-          <div class="setting-info">
-            <label for="globalEnabled">Extensie actief</label>
-            <span class="hint">Hoofdschakelaar</span>
-          </div>
+    <div class="main">
+      <h1>Settings</h1>
+
+      <div class="setting-group">
+        <label class="toggle-row">
+          <span class="label-text">
+            Enable Extension
+            <span class="hint">Globally enable or disable consent automation.</span>
+          </span>
           <label class="toggle">
-            <input type="checkbox" id="globalEnabled" checked>
+            <input type="checkbox" id="globalToggle">
             <span class="slider"></span>
           </label>
-        </div>
+        </label>
+      </div>
 
-        <div class="setting-row" style="display:block">
-          <div class="setting-info" style="margin-bottom:12px">
-            <label>Standaard Filter Modus</label>
-            <span class="hint">Bepaalt hoe agressief de extensie te werk gaat</span>
-          </div>
-
-          <div class="radio-group">
-            <div class="radio-option">
-              <input type="radio" name="filterMode" id="modeNormal" value="normal">
-              <label for="modeNormal">
-                <strong>Normal (Aanbevolen)</strong>
-                <span class="radio-hint">Stabiel. Forceert TCF reject en verwijdert banners via knoppen.</span>
-              </label>
+      <div class="setting-group">
+        <h2>Global Default Mode</h2>
+        <div class="radio-group" id="modeGroup">
+          <label class="radio-option">
+            <input type="radio" name="filterMode" value="normal">
+            <div class="radio-content">
+              <span class="radio-title">Normal</span>
+              <span class="radio-desc">Recommended. Tries to reject via TCF/Buttons. Minimal breakage.</span>
             </div>
-
-            <div class="radio-option">
-              <input type="radio" name="filterMode" id="modeExtreme" value="extreme">
-              <label for="modeExtreme">
-                <strong>Extreme</strong>
-                <span class="radio-hint">Agressief. Sloophamer voor overlay's. Kan sites breken.</span>
-              </label>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="filterMode" value="extreme">
+            <div class="radio-content">
+              <span class="radio-title">Extreme</span>
+              <span class="radio-desc">Aggressive. Removes overlays immediately. May break some sites.</span>
             </div>
-          </div>
+          </label>
         </div>
-      </section>
+      </div>
 
-      <!-- Allowlist -->
-      <section class="card">
+      <div class="setting-group" id="allowlist-section">
         <h2>Allowlist</h2>
-        <p class="hint">Sites waar de extensie uitgeschakeld is</p>
+        <p class="hint">Consent Breaker is disabled on these domains.</p>
 
-        <div class="input-group">
-          <input type="text" id="newDomain" placeholder="voorbeeld.nl">
-          <button id="addDomain" class="btn btn-primary">Toevoegen</button>
+        <div class="input-row">
+          <input type="text" id="newDomain" placeholder="example.com">
+          <button id="addDomain" class="btn primary">Add</button>
         </div>
 
-        <ul id="allowlist" class="domain-list">
-          <!-- Dynamically populated -->
-        </ul>
-        <p id="emptyAllowlist" class="empty-state">Geen sites in allowlist</p>
-      </section>
+        <div class="allowlist" id="allowlist">
+          <!-- Items injected via JS -->
+          <div class="empty-state">No domains allowed</div>
+        </div>
+      </div>
 
-      <!-- Advanced -->
-      <section class="card">
-        <h2>Geavanceerd</h2>
-        <div class="setting-row">
-          <div class="setting-info">
-            <label for="debugMode">Debug modus</label>
-            <span class="hint">Toon technische logs in console</span>
-          </div>
+      <div class="setting-group" style="border-top: 1px solid var(--border); margin-top: 24px; padding-top: 24px;">
+        <h2>Advanced Settings</h2>
+
+        <label class="toggle-row">
+          <span class="label-text">
+            Block Consent Sync
+            <span class="hint">Prevent CMPs from syncing consent data across domains via URL params or beacons.</span>
+          </span>
           <label class="toggle">
-            <input type="checkbox" id="debugMode">
+            <input type="checkbox" id="blockConsentSync">
             <span class="slider"></span>
           </label>
-        </div>
+        </label>
 
-        <div class="button-group" style="margin-top:12px">
-          <button id="exportSettings" class="btn btn-secondary">Exporteer</button>
-          <button id="importSettings" class="btn btn-secondary">Importeer</button>
-          <input type="file" id="importFile" accept=".json" style="display: none;">
-        </div>
-      </section>
+        <label class="toggle-row">
+          <span class="label-text">
+            Assume Reject on Fail
+            <span class="hint">If TCF override fails, force remove the banner (acts like Extreme mode).</span>
+          </span>
+          <label class="toggle">
+            <input type="checkbox" id="assumeReject">
+            <span class="slider"></span>
+          </label>
+        </label>
 
-      <!-- Stats -->
-      <section class="card">
-        <h2>Statistieken</h2>
-        <div class="stats">
-          <div class="stat">
-            <span class="stat-value" id="statBanners">0</span>
-            <span class="stat-label">Banners</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="statSites">0</span>
-            <span class="stat-label">Sites</span>
-          </div>
-        </div>
-      </section>
-    </main>
+        <label class="toggle-row">
+          <span class="label-text">
+            Verbose Logging
+            <span class="hint">Show detailed actions in Chrome Console for debugging.</span>
+          </span>
+          <label class="toggle">
+            <input type="checkbox" id="showLogs">
+            <span class="slider"></span>
+          </label>
+        </label>
+      </div>
 
-    <footer>
-      <p>Consent Breaker v1.1.0 · <a href="https://github.com/parvenuprompting/consent-breaker"
-          target="_blank">GitHub</a></p>
-    </footer>
+      <div class="actions">
+        <button id="save" class="btn primary">Save Changes</button>
+        <button id="export" class="btn secondary">Export Settings</button>
+        <button id="import" class="btn secondary">Import Settings</button>
+        <input type="file" id="importFile" hidden accept=".json">
+      </div>
+
+      <div id="status" class="status-msg"></div>
+
+      <div class="stats-footer">
+        Banners blocked: <span id="statBanners">0</span> • Sites: <span id="statSites">0</span>
+      </div>
+    </div>
   </div>
 
   <script src="options.js"></script>

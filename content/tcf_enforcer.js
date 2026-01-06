@@ -1,7 +1,6 @@
 /**
  * Consent Breaker - TCF Enforcer
- * 
- * Runs at document_start.
+ * V2: Adds reporting hooks
  */
 
 const TCFEnforcer = {
@@ -14,12 +13,6 @@ const TCFEnforcer = {
         this.injectOverrideScript();
         window.addEventListener('message', this.handleMessage.bind(this));
         this.setupLateDetection();
-
-        if (this.mode === 'extreme') {
-            // In extreme mode, if we see TCF frames but no successful override,
-            // we assume we need to block/reject aggressively.
-            // However, TCF override script is best effort.
-        }
     },
 
     injectOverrideScript() {
@@ -27,7 +20,6 @@ const TCFEnforcer = {
         try {
             const script = document.createElement('script');
             script.src = chrome.runtime.getURL('content/tcf_injected.js');
-            // Pass mode via dataset if we wanted, but script is simple
             script.onload = () => script.remove();
 
             const target = document.head || document.documentElement;
@@ -46,8 +38,12 @@ const TCFEnforcer = {
             this.tcfDetected = hadOriginal;
             this.log(`Override ${success ? 'success' : 'failed'}. Original: ${hadOriginal}`);
 
-            // Extreme fallback: if override failed but we suspect TCF, what to do?
-            // The banner slayer will likely kill the UI manifest.
+            if (success) {
+                this.report('TCF Override', 'Forced reject-all consent');
+            } else if (hadOriginal) {
+                // Fallback or warning
+                this.report('TCF Detected', 'Override failed, native CMP active');
+            }
         }
     },
 
@@ -62,7 +58,6 @@ const TCFEnforcer = {
 
         const target = document.body || document.documentElement;
         if (target) observer.observe(target, { childList: true, subtree: true });
-
         setTimeout(() => this.checkExistingFrames(), 1000);
     },
 
@@ -74,9 +69,19 @@ const TCFEnforcer = {
         const name = frame.name || '';
         const src = frame.src || '';
         if (name === '__tcfapiLocator' || name.includes('cmp') || src.includes('consent')) {
-            this.tcfDetected = true;
-            this.log('CMP frame detected');
+            if (!this.tcfDetected) { // Only report once
+                this.tcfDetected = true;
+                this.log('CMP frame detected');
+                this.report('TCF Frame', 'Detected CMP iframe');
+            }
         }
+    },
+
+    report(action, details) {
+        chrome.runtime.sendMessage({
+            type: 'REPORT_ACTION',
+            data: { action, details, domain: window.location.hostname }
+        }).catch(() => { });
     },
 
     log(msg, level = 'info') {
@@ -86,5 +91,4 @@ const TCFEnforcer = {
 
 if (typeof window !== 'undefined') {
     window.ConsentBreakerTCF = TCFEnforcer;
-    // Don't auto-init; let bootstrap do it with mode
 }

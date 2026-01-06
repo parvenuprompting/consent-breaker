@@ -4,127 +4,302 @@
 <head>
     <meta charset="UTF-8">
     <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text: #f1f5f9;
+            --text-dim: #94a3b8;
+            --accent: #3b82f6;
+            --danger: #ef4444;
+            --success: #10b981;
+            --border: #334155;
+        }
+
         body {
-            width: 280px;
+            width: 300px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f172a;
-            color: #f1f5f9;
+            background: var(--bg);
+            color: var(--text);
             margin: 0;
-            padding: 16px;
+            padding: 0;
         }
 
         .header {
+            padding: 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            margin-bottom: 16px;
+            align-items: center;
         }
 
         .title {
             font-weight: 700;
-            font-size: 16px;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .status {
-            font-size: 12px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: #1e293b;
-            color: #94a3b8;
+        .version {
+            font-size: 11px;
+            color: var(--text-dim);
+            font-weight: 400;
         }
 
-        .section {
-            background: #1e293b;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
+        .content {
+            padding: 16px;
+        }
+
+        /* Domain & Mode Indicator */
+        .context-bar {
+            margin-bottom: 16px;
+            text-align: center;
         }
 
         .domain {
             font-family: monospace;
-            text-align: center;
-            margin-bottom: 12px;
-            color: #3b82f6;
+            color: var(--accent);
+            font-size: 13px;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .option {
+        .effective-mode {
+            font-size: 11px;
+            color: var(--text-dim);
             display: flex;
             align-items: center;
-            margin-bottom: 8px;
-            cursor: pointer;
+            justify-content: center;
+            gap: 6px;
         }
 
-        .option input {
-            margin-right: 8px;
-        }
-
-        .option label {
-            cursor: pointer;
-        }
-
-        .hint {
-            font-size: 11px;
-            color: #64748b;
-            margin-left: 24px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #334155;
-            background: #1e293b;
-            color: #f1f5f9;
+        .mode-badge {
+            padding: 2px 6px;
             border-radius: 4px;
-            cursor: pointer;
+            background: var(--border);
+            color: #fff;
+            font-weight: 600;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+
+        .mode-badge.normal {
+            background: var(--accent);
+        }
+
+        .mode-badge.extreme {
+            background: var(--danger);
+        }
+
+        .mode-badge.disabled {
+            background: var(--text-dim);
+            color: #000;
+        }
+
+        /* Controls */
+        .control-group {
+            background: var(--surface);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .label {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        select {
+            width: 100%;
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 8px;
+            border-radius: 4px;
+            outline: none;
+            font-size: 13px;
+        }
+
+        /* Status Block */
+        .status-block {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 12px;
             font-size: 12px;
         }
 
-        .btn:hover {
-            background: #334155;
+        .status-title {
+            color: var(--text-dim);
+            font-size: 10px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .icon-success {
+            color: var(--success);
+        }
+
+        .icon-info {
+            color: var(--accent);
+        }
+
+        /* Escalation Actions */
+        .escalate-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--danger);
+            color: #ff8888;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            transition: background 0.2s;
+        }
+
+        .escalate-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        .disable-btn {
+            width: 100%;
+            padding: 8px;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+
+        .disable-btn:hover {
+            border-color: var(--text);
+            color: var(--text);
+        }
+
+        /* Footer */
+        .footer {
+            display: flex;
+            justify-content: center;
+            padding: 12px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        .settings-link {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+
+        .settings-link:hover {
+            color: var(--text);
+        }
+
+        /* System Page */
+        #systemPage {
+            display: none;
+            text-align: center;
+            padding: 32px 16px;
+            color: var(--text-dim);
+            font-size: 13px;
+        }
+
+        #mainContent {
+            display: block;
         }
     </style>
 </head>
 
 <body>
-    <div class="header">
-        <div class="title">Consent Breaker</div>
-        <div class="status" id="statusBadge">Active</div>
+    <!-- System / Empty Tab Message -->
+    <div id="systemPage">
+        <div style="font-size: 24px; margin-bottom: 8px;">🚫</div>
+        <div padding-bottom: 16px;">System Page</div>
+        <div style="font-size: 12px; opacity: 0.7;">Navigate to a website to configure per-site settings.</div>
+        <div style="margin-top: 24px;">
+            <button id="sysOptionsBtn" class="disable-btn">Open Global Settings</button>
+        </div>
     </div>
 
-    <div class="domain" id="currentDomain">...</div>
-
-    <div id="systemPageMsg"
-        style="display: none; padding: 12px; text-align: center; color: #94a3b8; font-size: 13px; margin-bottom: 16px; background: #1e293b; border-radius: 8px;">
-        Extensie is inactief op deze pagina (systeem of leeg tabblad).
-        <br><br>
-        Bezoek een website om per-site instellingen te wijzigen.
-    </div>
-
-    <div class="section" id="siteControls">
-        <div class="option">
-            <input type="radio" name="mode" id="modeDefault" value="default">
-            <label for="modeDefault">Global Default</label>
+    <div id="mainContent">
+        <div class="header">
+            <div class="title">Consent Breaker <span class="version">v1.1</span></div>
+            <div id="pulse" style="width: 8px; height: 8px; background: var(--success); border-radius: 50%;"></div>
         </div>
-        <div class="option">
-            <input type="radio" name="mode" id="modeNormal" value="normal">
-            <label for="modeNormal">Normal</label>
-        </div>
-        <div class="hint">Recommended for stability</div>
 
-        <div class="option" style="margin-top: 8px">
-            <input type="radio" name="mode" id="modeExtreme" value="extreme">
-            <label for="modeExtreme">Extreme</label>
-        </div>
-        <div class="hint">Aggressive removal, may break sites</div>
-    </div>
+        <div class="content">
+            <div class="context-bar">
+                <div class="domain" id="domainName">example.com</div>
+                <div class="effective-mode">
+                    Effective Mode: <span class="mode-badge" id="effectiveModeBadge">NORMAL</span>
+                </div>
+            </div>
 
-    <div class="actions">
-        <button class="btn" id="openOptions">More Settings</button>
+            <!-- Mode Selector -->
+            <div class="control-group">
+                <label class="label">Per-Site Override</label>
+                <select id="modeSelector">
+                    <option value="default">Use Global Default</option>
+                    <option value="normal">Force Normal</option>
+                    <option value="extreme">Force Extreme</option>
+                </select>
+
+                <div class="status-block" id="statusBlock">
+                    <div class="status-title">Last Actions</div>
+                    <div id="statusList">
+                        <div class="status-item"><span class="icon-info">ℹ️</span> Waiting for activity...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Smart Actions -->
+            <div id="smartActions">
+                <button id="escalateBtn" class="escalate-btn" style="display:none;">
+                    ⚡ Escalate to Extreme
+                </button>
+                <button id="disableBtn" class="disable-btn">
+                    ⛔ Disable on this site
+                </button>
+                <button id="enableBtn" class="escalate-btn"
+                    style="display:none; border-color: var(--success); color: var(--success); background: rgba(16, 185, 129, 0.15);">
+                    ✅ Re-enable on this site
+                </button>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <a id="optionsLink" class="settings-link">
+                ⚙️ More Settings
+            </a>
+        </div>
     </div>
 
     <script src="popup.js"></script>

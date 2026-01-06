@@ -1,7 +1,7 @@
 /**
  * Consent Breaker - Service Worker
- * Handles extension lifecycle, DNR rule management, and message passing.
- * Now supports Normal/Extreme modes.
+ * Handles extension lifecycle, DNR rule management, message passing, and status tracking.
+ * V2: Adds ephemeral tab status tracking & Advanced Settings.
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -13,6 +13,11 @@ const DEFAULT_SETTINGS = {
   filterMode: 'normal',
   debugMode: false,
   allowlist: [],
+  advanced: {
+    blockConsentSync: true, // If false, disables consent_sync rules
+    assumeReject: false,    // If true, acts as Extreme fallback even in Normal
+    showLogs: false         // Verbose console logging
+  },
   stats: {
     bannersBlocked: 0,
     sitesProcessed: 0
@@ -24,6 +29,8 @@ const RULESETS = {
   EXTREME: ['tracking_normal', 'consent_sync_normal', 'tracking_extreme', 'consent_sync_extreme']
 };
 
+const tabStatus = new Map(); // tabId -> { actions: [], mode: 'normal' }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Initialization
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,20 +38,16 @@ const RULESETS = {
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
     await chrome.storage.sync.set(DEFAULT_SETTINGS);
-    // Ensure correct rules are active (default normal)
     await applyFilterMode('normal');
-    log('Extension installed, default settings applied');
   } else if (details.reason === 'update') {
-    // Migration: ensure filterMode exists
     const settings = await chrome.storage.sync.get(['filterMode']);
-    if (!settings.filterMode) {
-      await chrome.storage.sync.set({ filterMode: 'normal' });
-    }
-    // Re-apply rules based on stored setting
-    const current = await chrome.storage.sync.get(['filterMode']);
-    await applyFilterMode(current.filterMode || 'normal');
-    log(`Extension updated to version ${chrome.runtime.getManifest().version}, mode: ${current.filterMode}`);
+    if (!settings.filterMode) await chrome.storage.sync.set({ filterMode: 'normal' });
+    await applyFilterMode(settings.filterMode || 'normal');
   }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  tabStatus.delete(tabId);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,19 +56,20 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   handleMessage(message, sender).then(sendResponse);
-  return true; // Keep channel open for async response
+  return true;
 });
 
 async function handleMessage(message, sender) {
   const { type, data } = message;
+  const tabId = sender?.tab?.id;
 
   switch (type) {
     case 'GET_SETTINGS':
       return await getSettings();
 
     case 'GET_MODE':
-      // Return effective mode for a domain
       const mode = await resolveDomainMode(data?.domain);
+      if (tabId) updateTabStatus(tabId, { mode });
       return { mode };
 
     case 'SET_GLOBAL_MODE':
@@ -80,17 +84,53 @@ async function handleMessage(message, sender) {
       return await checkDomainAllowed(data.domain);
 
     case 'LOG_ACTION':
-      await logAction(sender.tab?.id, data);
+      await logAction(tabId, data);
       return { success: true };
 
     case 'UPDATE_STATS':
       await updateStats(data);
       return { success: true };
 
+    case 'REPORT_ACTION':
+      if (tabId) {
+        updateTabStatus(tabId, { action: data.action, details: data.details });
+        await logAction(tabId, { action: data.action, domain: data.domain, details: data.details });
+      }
+      return { success: true };
+
+    case 'GET_TAB_STATUS':
+      // Called from popup
+      return tabStatus.get(data.tabId) || { actions: [], mode: 'active' };
+
     default:
-      // log(`Unknown message type: ${type}`);
       return { error: 'Unknown message type' };
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Status Tracking
+// ─────────────────────────────────────────────────────────────────────────────
+
+function updateTabStatus(tabId, update) {
+  const current = tabStatus.get(tabId) || { actions: [], mode: 'unknown' };
+
+  if (update.mode) current.mode = update.mode;
+
+  if (update.action) {
+    const timestamp = new Date().toISOString();
+    // Simple deduplication
+    const last = current.actions[current.actions.length - 1];
+    if (!last || last.action !== update.action || last.details !== update.details) {
+      current.actions.push({
+        action: update.action,
+        details: update.details,
+        timestamp
+      });
+      if (current.actions.length > 20) current.actions.shift();
+    }
+  }
+
+  tabStatus.set(tabId, current);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -98,9 +138,6 @@ async function handleMessage(message, sender) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function resolveDomainMode(domain) {
-  // Use imported Storage wrapper logic if possible, or reimplement lightweight here
-  // Since we don't import Storage in SW easily without ES modules in MV3 (unless configured),
-  // we'll read directly.
   const settings = await chrome.storage.sync.get({
     filterMode: 'normal',
     perDomainOverrides: {},
@@ -110,7 +147,6 @@ async function resolveDomainMode(domain) {
   if (!settings.globalEnabled) return 'disabled';
 
   if (domain && settings.perDomainOverrides) {
-    // Simple normalization
     const normDomain = domain.toLowerCase().replace(/^www\./, '');
     const override = settings.perDomainOverrides[normDomain];
     if (override && override.filterMode) {
@@ -123,7 +159,6 @@ async function resolveDomainMode(domain) {
 
 async function setGlobalMode(mode) {
   if (mode !== 'normal' && mode !== 'extreme') return;
-
   await chrome.storage.sync.set({ filterMode: mode });
   await applyFilterMode(mode);
 }
@@ -143,19 +178,20 @@ async function setDomainMode(domain, mode) {
   }
 
   await chrome.storage.sync.set({ perDomainOverrides: settings.perDomainOverrides });
-
-  // NOTE: DNR rules are global. Changing a single domain's mode
-  // does NOT change global DNR rules. Per-domain overrides only affect
-  // content scripts (Banner/TCF) behavior.
-  // This is a documented design decision.
 }
 
 async function applyFilterMode(mode) {
-  const enableRules = RULESETS[mode.toUpperCase()] || RULESETS.NORMAL;
+  const settings = await getSettings();
+  const advanced = settings.advanced || DEFAULT_SETTINGS.advanced;
 
-  // Disable all known rulesets first to be clean, or calculate diff
+  let enableRules = [...(RULESETS[mode.toUpperCase()] || RULESETS.NORMAL)];
+
+  // Advanced: Toggle Consent Sync rules
+  if (advanced.blockConsentSync === false) {
+    enableRules = enableRules.filter(r => !r.includes('consent_sync'));
+  }
+
   const allRules = ['tracking_normal', 'consent_sync_normal', 'tracking_extreme', 'consent_sync_extreme'];
-
   const disableRules = allRules.filter(r => !enableRules.includes(r));
 
   await chrome.declarativeNetRequest.updateEnabledRulesets({
@@ -163,85 +199,54 @@ async function applyFilterMode(mode) {
     disableRulesetIds: disableRules
   });
 
-  log(`Applied filter mode: ${mode} (Rules: ${enableRules.join(', ')})`);
+  // logAction(null, { domain: 'System', details: `Applied mode: ${mode}, rules: ${enableRules.length}` });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Settings Management
+// Settings & Stats
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function getSettings() {
   try {
-    const settings = await chrome.storage.sync.get(DEFAULT_SETTINGS);
-    return settings;
+    return await chrome.storage.sync.get(DEFAULT_SETTINGS);
   } catch (error) {
-    log(`Error getting settings: ${error.message}`);
     return DEFAULT_SETTINGS;
   }
 }
 
 async function checkDomainAllowed(domain) {
   const settings = await getSettings();
+  if (!settings.globalEnabled) return { allowed: false, reason: 'global_disabled' };
 
-  if (!settings.globalEnabled) {
-    return { allowed: false, reason: 'global_disabled' };
-  }
-
-  const isAllowlisted = settings.allowlist.some(d => {
-    return domain === d || domain.endsWith(`.${d}`);
-  });
-
-  if (isAllowlisted) {
-    return { allowed: false, reason: 'allowlisted' };
-  }
+  const isAllowlisted = settings.allowlist.some(d => domain === d || domain.endsWith(`.${d}`));
+  if (isAllowlisted) return { allowed: false, reason: 'allowlisted' };
 
   return { allowed: true };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Statistics & Logging
-// ─────────────────────────────────────────────────────────────────────────────
-
 async function updateStats(data) {
   try {
     const settings = await getSettings();
-
     if (data.bannerBlocked) settings.stats.bannersBlocked++;
     if (data.siteProcessed) settings.stats.sitesProcessed++;
-
     await chrome.storage.sync.set({ stats: settings.stats });
-  } catch (error) {
-    log(`Error updating stats: ${error.message}`);
-  }
+  } catch (error) { }
 }
 
 const MAX_LOG_ENTRIES = 500;
 let debugLogs = [];
 
-async function log(message, level = 'info') {
-  const settings = await getSettings();
-  const entry = { timestamp: new Date().toISOString(), level, message };
-
-  debugLogs.push(entry);
-  if (debugLogs.length > MAX_LOG_ENTRIES) debugLogs = debugLogs.slice(-MAX_LOG_ENTRIES);
-
-  if (settings.debugMode) {
-    console.log(`[Consent Breaker SW] [${level.toUpperCase()}] ${message}`);
-  }
-}
-
 async function logAction(tabId, data) {
-  const { action, domain, details } = data;
-  await log(`[${domain}] ${action}: ${JSON.stringify(details)}`);
+  if (data.domain) {
+    debugLogs.push({ ts: new Date().toISOString(), ...data });
+    if (debugLogs.length > MAX_LOG_ENTRIES) debugLogs.shift();
+  }
 
-  // Badge logic (Green for Normal, Red/Orange for Extreme? Or just Green)
   if (tabId) {
-    try {
-      // Determine mode for badge color?
-      // const mode = await resolveDomainMode(domain);
-      // const color = mode === 'extreme' ? '#F44336' : '#4CAF50';
-      const color = '#4CAF50';
+    let color = '#4CAF50';
+    if (data.details && data.details.includes('Extreme')) color = '#F44336';
 
+    try {
       await chrome.action.setBadgeText({ text: '✓', tabId });
       await chrome.action.setBadgeBackgroundColor({ color, tabId });
       setTimeout(async () => {
@@ -252,12 +257,18 @@ async function logAction(tabId, data) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Other listeners
+// Listeners
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Listen for storage changes to update DNR rules if global mode changes
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'sync' && changes.filterMode) {
-    applyFilterMode(changes.filterMode.newValue);
+  if (area === 'sync') {
+    if (changes.filterMode) {
+      applyFilterMode(changes.filterMode.newValue);
+    }
+    // Also re-apply if advanced settings change
+    if (changes.advanced) {
+      // Need current mode
+      chrome.storage.sync.get(['filterMode']).then(s => applyFilterMode(s.filterMode || 'normal'));
+    }
   }
 });
