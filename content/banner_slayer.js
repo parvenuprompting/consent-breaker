@@ -116,10 +116,9 @@ const BannerSlayer = {
     findCandidates() {
         const DOM = window.ConsentBreakerDOM;
         const candidates = [];
-        // Added [class*="cmp"] and [id*="cmp"]
         const selector = `
-      [class*="cookie"], [class*="consent"], [class*="gdpr"], [class*="privacy"], [class*="cmp"],
-      [id*="cookie"], [id*="consent"], [id*="gdpr"], [id*="cmp"], [role="dialog"], [role="alertdialog"]
+      [class*="cookie"], [class*="consent"], [class*="gdpr"], [class*="privacy"], [class*="cmp"], [class*="notice"],
+      [id*="cookie"], [id*="consent"], [id*="gdpr"], [id*="cmp"], [id*="notice"], [role="dialog"], [role="alertdialog"]
     `;
 
         document.querySelectorAll(selector).forEach(el => {
@@ -144,41 +143,52 @@ const BannerSlayer = {
         // Text Analysis
         const text = (element.innerText || '').toLowerCase();
 
-        // Strong Keywords (Dutch/English)
-        const strongKeywords = ['weiger', 'reject', 'decline', 'alles weigeren', 'alleen noodzakelijk'];
-        let hasStrongKeyword = false;
-        strongKeywords.forEach(k => { if (text.includes(k)) hasStrongKeyword = true; });
+        // Strong Reject Keywords
+        const rejectKeywords = ['weiger', 'reject', 'decline', 'alles weigeren', 'alleen noodzakelijk'];
+        let hasRejectKey = false;
+        rejectKeywords.forEach(k => { if (text.includes(k)) hasRejectKey = true; });
 
-        // General Keywords - Added 'cmp'
-        const keywords = ['cookie', 'consent', 'accept', 'privacy', 'partner', 'instellen', 'toestemming', 'cmp'];
+        // Strong Accept/Confirmation Keywords (Signals "This IS a banner")
+        // "akkoord", "begrepen", "accept", "prima", "aanvaarden"
+        const acceptKeywords = ['akkoord', 'accept', 'accepteren', 'begrepen', 'prima', 'aanvaarden', 'verder gaan'];
+
+        // General Keywords
+        const generalKeywords = ['cookie', 'consent', 'privacy', 'partner', 'instellen', 'toestemming', 'cmp'];
         let textScore = 0;
-        keywords.forEach(k => { if (text.includes(k)) textScore += 5; });
+        generalKeywords.forEach(k => { if (text.includes(k)) textScore += 5; });
 
         if (score < 10 && textScore > 0) textScore = 0;
         score += Math.min(textScore, 25);
 
         // Button Analysis
-        const buttons = element.querySelectorAll('button, a, .btn, [role="button"]');
+        const buttons = element.querySelectorAll('button, a, .btn, [role="button"], input[type="button"], input[type="submit"]');
         let hasRejectBtn = false;
+        let hasAcceptBtn = false; // New: Detect accept buttons too
         let hasAction = false;
 
         buttons.forEach(btn => {
             hasAction = true;
-            const bText = (btn.innerText || '').toLowerCase();
-            if (bText.includes('reject') || bText.includes('weiger') || bText.includes('decline') || bText.includes('noodzakelijk')) {
+            const bText = (btn.innerText || btn.value || '').toLowerCase();
+
+            if (rejectKeywords.some(k => bText.includes(k))) {
                 hasRejectBtn = true;
+            }
+            if (acceptKeywords.some(k => bText.includes(k))) {
+                hasAcceptBtn = true;
             }
         });
 
         if (hasAction) score += 5;
 
-        // Crucial: Boost score if explicit reject capability is found
+        // Boost scores
         if (hasRejectBtn) score += 40;
-        if (hasStrongKeyword) score += 10;
+        else if (hasAcceptBtn) score += 30; // Accept button strongly implies it is a banner
 
-        // Safeguards
-        if (text.includes('checkout') || text.includes('log in') || text.includes('sign in')) {
-            score -= 50;
+        if (hasRejectKey) score += 10;
+
+        // Safeguards (Do NOT remove login/checkout)
+        if (text.includes('checkout') || text.includes('log in') || text.includes('sign in') || text.includes('wachtwoord')) {
+            score -= 100; // Strong penalty
         }
 
         return score;
@@ -188,6 +198,7 @@ const BannerSlayer = {
         const DOM = window.ConsentBreakerDOM;
         const el = cand.element;
 
+        // 1. Try clicking Reject
         if (await this.tryRejectButton(el)) {
             await this.sleep(500);
             if (!DOM.isVisible(el)) {
@@ -197,6 +208,7 @@ const BannerSlayer = {
             }
         }
 
+        // 2. Try clicking Close
         if (await this.tryCloseButton(el)) {
             await this.sleep(500);
             if (!DOM.isVisible(el)) {
@@ -206,24 +218,33 @@ const BannerSlayer = {
             }
         }
 
-        if (this.mode === 'extreme') {
+        // 3. Fallback: Removal (Slay)
+        // In Extreme: Always remove if score > threshold
+        // In Normal: Only remove if we are VERY sure (score > 80) OR if it matches "Accept Only" pattern
+        // Update logic: If it has Akkoord button (score += 30) and structural (20+20) + text (10) -> Score ~80.
+
+        const shouldRemove = (this.mode === 'extreme' && cand.score >= 40) ||
+            (this.mode === 'normal' && cand.score >= 70); // Lowered from 80 to catch Akkoord-only banners
+
+        if (shouldRemove) {
             DOM.hideElement(el);
+            // Also look for separate backdrops
+            const backdrop = document.querySelector('.modal-backdrop, .overlay, .backdrop');
+            if (backdrop && DOM.isVisible(backdrop)) DOM.hideElement(backdrop);
+
             DOM.restoreScroll();
-            this.report('Banner Removed', 'Extreme mode forced removal');
-        } else {
-            if (cand.score > 80) {
-                DOM.hideElement(el);
-                this.report('Banner Removed', 'High confidence removal');
-            }
+            this.report('Banner Removed', 'Heuristic removal (Slayed)');
         }
     },
 
     async tryRejectButton(container) {
         const DOM = window.ConsentBreakerDOM;
-        const buttons = container.querySelectorAll('button, a, .btn');
+        const buttons = container.querySelectorAll('button, a, .btn, input[type="button"]');
+        const rejectKeywords = ['weiger', 'reject', 'decline', 'noodzakelijk', 'instellen', 'manage'];
+
         for (const btn of buttons) {
-            const txt = (btn.innerText || '').toLowerCase();
-            if (txt.includes('reject') || txt.includes('weiger') || txt.includes('decline') || txt.includes('noodzakelijk')) {
+            const txt = (btn.innerText || btn.value || '').toLowerCase();
+            if (rejectKeywords.some(k => txt.includes(k))) {
                 DOM.safeClick(btn);
                 return true;
             }
@@ -252,17 +273,14 @@ const BannerSlayer = {
     },
 
     observeDOM() {
-        // Aggressive observation for first 12 seconds
         const fastScan = setInterval(() => this.scan(), 1000);
         setTimeout(() => clearInterval(fastScan), 12000);
 
         const observer = new MutationObserver((mutations) => {
-            // Debounce scan
             if (this.scanTimeout) clearTimeout(this.scanTimeout);
             this.scanTimeout = setTimeout(() => this.scan(), 500);
         });
 
-        // Observer options: subtree is crucial
         observer.observe(document.body || document.documentElement, {
             childList: true,
             subtree: true,
