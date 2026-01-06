@@ -1,129 +1,218 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
-  <title>Consent Breaker Options</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consent Breaker Settings</title>
+  <link rel="stylesheet" href="../popup/theme.css">
   <link rel="stylesheet" href="options.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
-  <div class="container">
-    <div class="sidebar">
-      <div class="logo">
-        <div class="icon-placeholder">🛡️</div>
-        <span>Consent Breaker</span>
+
+  <div class="app-shell">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo-icon">🛡️</div>
+        <span>Consent<br>Breaker</span>
       </div>
 
-      <div class="nav-item active">General</div>
-      <div class="nav-item">Allowlist</div>
-      <div class="nav-item">About</div>
-    </div>
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="general">
+          <span class="icon">⚙️</span> General
+        </button>
+        <button class="nav-item" data-tab="allowlist">
+          <span class="icon">✅</span> Allowlist
+        </button>
+        <button class="nav-item" data-tab="advanced">
+          <span class="icon">⚡</span> Advanced
+        </button>
+        <button class="nav-item" data-tab="about">
+          <span class="icon">ℹ️</span> About
+        </button>
+      </nav>
 
-    <div class="main">
-      <h1>Settings</h1>
-
-      <div class="setting-group">
-        <label class="toggle-row">
-          <span class="label-text">
-            Enable Extension
-            <span class="hint">Globally enable or disable consent automation.</span>
-          </span>
-          <label class="toggle">
-            <input type="checkbox" id="globalToggle">
-            <span class="slider"></span>
-          </label>
-        </label>
+      <div class="sidebar-footer">
+        <div class="stat-box">
+          <div class="stat-val" id="statBanners">0</div>
+          <div class="stat-label">Banners Slayed</div>
+        </div>
       </div>
+    </aside>
 
-      <div class="setting-group">
-        <h2>Global Default Mode</h2>
-        <div class="radio-group" id="modeGroup">
-          <label class="radio-option">
-            <input type="radio" name="filterMode" value="normal">
-            <div class="radio-content">
-              <span class="radio-title">Normal</span>
-              <span class="radio-desc">Recommended. Tries to reject via TCF/Buttons. Minimal breakage.</span>
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- SECTION: GENERAL -->
+      <section id="section-general" class="tab-pane active">
+        <header class="section-header">
+          <h1>General Settings</h1>
+          <p>Configure how Consent Breaker protects your privacy.</p>
+        </header>
+
+        <div class="glass-card">
+          <div class="setting-row">
+            <div class="setting-info">
+              <label class="setting-title">Enable Extension</label>
+              <div class="setting-desc">Globally enable or disable consent automation.</div>
             </div>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="filterMode" value="extreme">
-            <div class="radio-content">
-              <span class="radio-title">Extreme</span>
-              <span class="radio-desc">Aggressive. Removes overlays immediately. May break some sites.</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="globalToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-title">Default Filter Mode</div>
+          <div class="mode-selector" id="modeGroup">
+            <label class="mode-card">
+              <input type="radio" name="filterMode" value="normal">
+              <div class="mode-content">
+                <div class="mode-icon">🛡️</div>
+                <div class="mode-info">
+                  <div class="mode-name">Normal</div>
+                  <div class="mode-desc">Smart rejection. Minimal breakage. Recommended.</div>
+                </div>
+              </div>
+            </label>
+
+            <label class="mode-card">
+              <input type="radio" name="filterMode" value="extreme">
+              <div class="mode-content">
+                <div class="mode-icon">🔥</div>
+                <div class="mode-info">
+                  <div class="mode-name">Extreme</div>
+                  <div class="mode-desc">Force removal. Aggressive. May break sites.</div>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: ALLOWLIST -->
+      <section id="section-allowlist" class="tab-pane">
+        <header class="section-header">
+          <h1>Allowlist</h1>
+          <p>Consent Breaker is disabled on these domains.</p>
+        </header>
+
+        <div class="glass-card">
+          <div class="input-group">
+            <input type="text" id="newDomain" placeholder="example.com" class="glass-input">
+            <button id="addDomain" class="btn-neon">Add Domain</button>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="allowlist-container" id="allowlist">
+            <!-- Injected via JS -->
+            <div class="empty-state">No domains in allowlist</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: ADVANCED -->
+      <section id="section-advanced" class="tab-pane">
+        <header class="section-header">
+          <h1>Advanced</h1>
+          <p>Power user settings and data management.</p>
+        </header>
+
+        <div class="glass-card">
+          <div class="setting-row">
+            <div class="setting-info">
+              <label class="setting-title">Block Consent Sync</label>
+              <div class="setting-desc">Prevents CMPs from sharing consent URL params.</div>
             </div>
-          </label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="blockConsentSync">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label class="setting-title">Assume Reject on Fail</label>
+              <div class="setting-desc">If TCF fails, force banner removal (Like Extreme).</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="assumeReject">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label class="setting-title">Verbose Logging</label>
+              <div class="setting-desc">Show debug info in Chrome Console.</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="showLogs">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
-      </div>
 
-      <div class="setting-group" id="allowlist-section">
-        <h2>Allowlist</h2>
-        <p class="hint">Consent Breaker is disabled on these domains.</p>
-
-        <div class="input-row">
-          <input type="text" id="newDomain" placeholder="example.com">
-          <button id="addDomain" class="btn primary">Add</button>
+        <div class="glass-card" style="margin-top: 20px;">
+          <div class="card-title">Data Management</div>
+          <div class="action-grid">
+            <button id="export" class="btn-glass">Export Settings</button>
+            <button id="import" class="btn-glass">Import Settings</button>
+            <input type="file" id="importFile" hidden accept=".json">
+          </div>
         </div>
+      </section>
 
-        <div class="allowlist" id="allowlist">
-          <!-- Items injected via JS -->
-          <div class="empty-state">No domains allowed</div>
+      <!-- SECTION: ABOUT -->
+      <section id="section-about" class="tab-pane">
+        <header class="section-header">
+          <h1>About</h1>
+          <p>Consent Breaker v2.0</p>
+        </header>
+        <div class="glass-card">
+          <p style="color: var(--text-secondary); line-height: 1.6;">
+            Consent Breaker is designed to protect your digital sanity by automating the rejection of cookie consent
+            banners.
+            <br><br>
+            <strong>Privacy First:</strong> We do not track you. All processing happens on your device.
+          </p>
+          <div style="margin-top: 20px;">
+            <a href="https://github.com/parvenuprompting/consent-breaker" target="_blank" class="btn-glass small">GitHub
+              Repository</a>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div class="setting-group" style="border-top: 1px solid var(--border); margin-top: 24px; padding-top: 24px;">
-        <h2>Advanced Settings</h2>
-
-        <label class="toggle-row">
-          <span class="label-text">
-            Block Consent Sync
-            <span class="hint">Prevent CMPs from syncing consent data across domains via URL params or beacons.</span>
-          </span>
-          <label class="toggle">
-            <input type="checkbox" id="blockConsentSync">
-            <span class="slider"></span>
-          </label>
-        </label>
-
-        <label class="toggle-row">
-          <span class="label-text">
-            Assume Reject on Fail
-            <span class="hint">If TCF override fails, force remove the banner (acts like Extreme mode).</span>
-          </span>
-          <label class="toggle">
-            <input type="checkbox" id="assumeReject">
-            <span class="slider"></span>
-          </label>
-        </label>
-
-        <label class="toggle-row">
-          <span class="label-text">
-            Verbose Logging
-            <span class="hint">Show detailed actions in Chrome Console for debugging.</span>
-          </span>
-          <label class="toggle">
-            <input type="checkbox" id="showLogs">
-            <span class="slider"></span>
-          </label>
-        </label>
-      </div>
-
-      <div class="actions">
-        <button id="save" class="btn primary">Save Changes</button>
-        <button id="export" class="btn secondary">Export Settings</button>
-        <button id="import" class="btn secondary">Import Settings</button>
-        <input type="file" id="importFile" hidden accept=".json">
-      </div>
-
-      <div id="status" class="status-msg"></div>
-
-      <div class="stats-footer">
-        Banners blocked: <span id="statBanners">0</span> • Sites: <span id="statSites">0</span>
-      </div>
-    </div>
+    </main>
   </div>
 
+  <div id="status" class="toast hidden">Saved!</div>
+
   <script src="options.js"></script>
+  <script>
+    // Inline simple tab switcher to avoid complex JS logic changes
+    document.querySelectorAll('.nav-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Remove active
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+        // Add active
+        btn.classList.add('active');
+        const target = btn.dataset.tab;
+        document.getElementById(`section-${target}`).classList.add('active');
+      });
+    });
+  </script>
 </body>
 
 </html>
