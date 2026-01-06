@@ -8,7 +8,9 @@ Automatisch cookie consent banners weigeren door technisch in te grijpen op TCF/
 1.  **TCF/CMP Auto-Reject**: Detecteert IAB TCF v2.x omgevingen en forceert "geen consent" direct via de TCF API (`__tcfapi`). Override `purposes`, `vendors` en `legitimateInterests` naar `false`.
 2.  **Banner Slayer**: Verwijdert consent overlays via heuristieken (structural signals > tekst keywords) en "Banner Slaying" logica.
 3.  **Network Blocking**: Blokkeert bekende tracking en consent-sync endpoints als fallback.
-4.  **Per-site Control**: Granulaire controle per site via pop-up (Normal/Extreme modes).
+4.  **Deep DOM Inspection**: Breekt door Shadow DOM barrières heen (V2.0). 
+5.  **Smart Heuristics**: Slayt banners zonder "Weiger" knop (e.g. "Akkoord"-only cookie walls).
+6.  **Per-site Control**: Granulaire controle per site via pop-up (Normal/Extreme modes).
 
 ---
 
