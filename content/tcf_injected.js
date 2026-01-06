@@ -1,29 +1,102 @@
 /**
  * Consent Breaker - TCF Injected Script
  * 
- * This script runs in the PAGE CONTEXT (not content script sandbox).
- * It's injected via <script> tag to access window.__tcfapi.
- * 
- * Strategy:
- * 1. Hook/override __tcfapi before CMP initializes
- * 2. Return reject-all consent state for all queries
- * 3. Block legitimate interest
- * 4. Signal completion back to content script
+ * V1.2.0: Dynamic TC String Generation
+ * Runs in the PAGE CONTEXT (injected).
  */
 
 (function () {
     'use strict';
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Constants: Valid Reject-All TC String
+    // Dynamic TC String Generator (TCF v2.2)
     // ─────────────────────────────────────────────────────────────────────────
 
-    // This is a minimal valid TCF v2.2 TC String that represents:
-    // - All purposes rejected
-    // - All vendors rejected
-    // - All legitimate interests rejected
-    // Format: Base64-encoded according to IAB TCF spec
-    const REJECT_ALL_TC_STRING = 'CPv4IAAPV4IAAPoABAENBkCsAP_AAH_AAAAAJqNd_X__bX9j-_5_f_t0eY1P9_r_v-Qzjhfdt-8N2f_X_L8X42M7vF36pq4KuR4Eu3LBIQNlHMHUTUmwaokVrzHsak2MpyNKJ7LkmnsZe2dYGH9Pn9lDuYKY7_5___bz3z-v_t_-39T378X_3_d5_2---vCfV599jbv9f3__39nP___9v-_8_______gAAAAA.YAAAAAAAAAAA';
+    /**
+     * Generates a valid, fresher-than-fresh TCF v2.2 string.
+     * Replaces the static hardcoded string to avoid 'expired consent' issues.
+     * 
+     * Base structure is a "Reject All" string with:
+     * - Version: 2
+     * - Created/LastUpdated: NOW
+     * - CMP ID: 0 (or a burner ID)
+     * - CMP Version: 1
+     * - Consent Screen: 1
+     * - Consent Language: EN (AA)
+     * - Vendor List Version: 100 (Arbitrary valid)
+     * - TCF Policy Version: 4
+     * - IsServiceSpecific: 1
+     * - UseNonStandardStacks: 0
+     * - SpecialFeatureOptins: 0 (12 bits)
+     * - PurposeConsents: 0 (24 bits)
+     * - PurposeLegitimateInterests: 0 (24 bits)
+     * - PurposeOneTreatment: 0
+     * - PublisherCC: AA (000000000000)
+     * - VendorConsents: 0 (Range encoding -> 0 entries)
+     * - VendorLegitimateInterests: 0 (Range encoding -> 0 entries)
+     * - PublisherRestrictions: 0 (0 entries)
+     */
+    function generateDynamicTCString() {
+        const now = Date.now();
+        // Time is in deciseconds (1/10th second)
+        const nowDeci = Math.round(now / 100);
+
+        // Helper to Convert Int to Binary String (padded)
+        const toBin = (val, len) => val.toString(2).padStart(len, '0');
+
+        // Helper to encode 6-bit chunks to Base64URL characters
+        const base64UrlChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+        const binToBase64 = (binStr) => {
+            let res = '';
+            // Pad to multiple of 6
+            while (binStr.length % 6 !== 0) binStr += '0';
+
+            for (let i = 0; i < binStr.length; i += 6) {
+                const chunk = binStr.substring(i, i + 6);
+                res += base64UrlChars[parseInt(chunk, 2)];
+            }
+            return res;
+        };
+
+        // Construct the Core String (TCF v2.2) based on IAB Spec
+        let bin = '';
+
+        bin += toBin(2, 6);           // Version: 2
+        bin += toBin(nowDeci, 36);    // Created: Now
+        bin += toBin(nowDeci, 36);    // LastUpdated: Now
+        bin += toBin(0, 12);          // CmpId: 0
+        bin += toBin(1, 12);          // CmpVersion: 1
+        bin += toBin(1, 6);           // ConsentScreen: 1
+        bin += toBin(0, 12);          // ConsentLanguage: AA (EN=3549? No, AA=0 is safer generic)
+        bin += toBin(300, 12);        // VendorListVersion: 300 (Arbitrary moderately new)
+        bin += toBin(4, 6);           // TcfPolicyVersion: 4
+        bin += toBin(1, 1);           // IsServiceSpecific: true
+        bin += toBin(0, 1);           // UseNonStandardStacks: false
+        bin += toBin(0, 12);          // SpecialFeatureOptins: none
+        bin += toBin(0, 24);          // PurposeConsents: none
+        bin += toBin(0, 24);          // PurposeLegitimateInterests: none
+        bin += toBin(0, 1);           // PurposeOneTreatment: false
+        bin += toBin(0, 12);          // PublisherCC: AA
+
+        // Vendor Consents: Range Section
+        bin += toBin(65535, 16);      // MaxVendorId
+        bin += toBin(1, 1);           // EncodingType: 1 (Range)
+        bin += toBin(0, 12);          // NumEntries: 0 (No consents)
+
+        // Vendor Legitimate Interests: Range Section
+        bin += toBin(65535, 16);      // MaxVendorId
+        bin += toBin(1, 1);           // EncodingType: 1 (Range)
+        bin += toBin(0, 12);          // NumEntries: 0 (No interests)
+
+        // Publisher Restrictions
+        bin += toBin(0, 12);          // NumPubRestrictions: 0
+
+        // Convert directly to Base64
+        return binToBase64(bin);
+
+        // Note: DisclosedValidators and PublisherPurposes segments are omitted 
+        // as they are optional/publisher specific. Keep it minimal.
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Reject-All TCData Object
@@ -31,7 +104,7 @@
 
     function createRejectAllTCData() {
         return {
-            tcString: REJECT_ALL_TC_STRING,
+            tcString: generateDynamicTCString(), // Use dynamic string
             tcfPolicyVersion: 4,
             cmpId: 0,
             cmpVersion: 0,
@@ -121,7 +194,7 @@
                     apiVersion: '2.2',
                     cmpVersion: 1,
                     cmpId: 0,
-                    gvlVersion: 0,
+                    gvlVersion: 300,
                     tcfPolicyVersion: 4
                 }, true);
                 break;
@@ -202,7 +275,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Google Consent Mode Override (bonus)
+    // Google Consent Mode Override
     // ─────────────────────────────────────────────────────────────────────────
 
     function overrideGoogleConsentMode() {
@@ -238,7 +311,6 @@
     // Execute
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Install immediately (we're already in page context at document_start)
     install();
     overrideGoogleConsentMode();
 
