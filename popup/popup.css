@@ -1,0 +1,341 @@
+/**
+ * Consent Breaker - Popup Styles
+ * Depends on: theme.css
+ */
+
+/* Layout & Containers */
+.app-container {
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    gap: var(--space-md);
+}
+
+.system-view {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.icon-large {
+    font-size: 48px;
+    margin-bottom: var(--space-sm);
+}
+
+.system-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-xs);
+}
+
+.system-desc {
+    font-size: 13px;
+    margin-bottom: var(--space-lg);
+}
+
+/* Header */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 var(--space-xs);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.5px;
+    text-shadow: 0 0 10px rgba(189, 0, 255, 0.4);
+}
+
+.settings-icon {
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s, transform 0.2s;
+    opacity: 0.7;
+}
+
+.settings-icon:hover {
+    color: var(--text-primary);
+    transform: rotate(45deg);
+    opacity: 1;
+}
+
+/* Hero Status */
+.hero-section {
+    text-align: center;
+    margin-bottom: var(--space-xs);
+}
+
+.domain-badge {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(4px);
+    margin-bottom: var(--space-sm);
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.status-indicator {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: var(--space-xs);
+}
+
+.status-text {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    background: var(--grad-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+    filter: drop-shadow(0 0 8px rgba(189, 0, 255, 0.3));
+}
+
+/* Cards */
+.glass-card {
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur-md);
+    border: var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    box-shadow: var(--shadow-card);
+    transition: transform var(--duration-normal) var(--ease-spring), border-color var(--duration-fast);
+}
+
+.glass-card:hover {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Controls */
+.control-row {
+    margin-bottom: var(--space-md);
+}
+
+.control-label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-sm);
+    font-weight: 600;
+}
+
+.select-wrapper {
+    position: relative;
+}
+
+select {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text-primary);
+    border: var(--border-light);
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+select:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.6);
+}
+
+select:focus {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+}
+
+/* Buttons */
+.btn-primary {
+    width: 100%;
+    border: none;
+    background: var(--grad-primary);
+    color: #fff;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.1s;
+    box-shadow: 0 4px 15px rgba(189, 0, 255, 0.3);
+}
+
+.btn-primary::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(rgba(255, 255, 255, 0.2), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+    transform: scale(1.02);
+}
+
+.btn-primary:hover::after {
+    opacity: 1;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-secondary,
+.btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+    margin-top: var(--space-sm);
+    width: 100%;
+    transition: all 0.2s;
+}
+
+.btn-ghost:hover {
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+}
+
+.btn-success {
+    @extend .btn-primary;
+    /* Conceptual */
+    width: 100%;
+    background: rgba(0, 255, 157, 0.1);
+    border: 1px solid var(--neon-green);
+    color: var(--neon-green);
+    font-weight: 600;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 255, 157, 0.1);
+}
+
+.btn-success:hover {
+    background: rgba(0, 255, 157, 0.2);
+}
+
+/* Log List */
+.log-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    /* Enable scrolling flex child */
+    background: rgba(0, 0, 0, 0.2);
+    /* Darker glass for logs */
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-sm);
+    font-weight: 600;
+}
+
+.live-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--neon-green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--neon-green);
+    animation: blink 2s infinite;
+}
+
+.log-list {
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 4px;
+}
+
+/* Custom Scrollbar */
+.log-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.log-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+.log-item {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: slideIn 0.3s ease-out backwards;
+}
+
+.log-item.empty {
+    background: transparent;
+    color: var(--text-muted);
+    font-style: italic;
+    justify-content: center;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
