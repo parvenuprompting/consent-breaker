@@ -1,0 +1,387 @@
+{
+    "cmpProviders": [
+        {
+            "name": "OneTrust",
+            "selectors": {
+                "container": [
+                    "#onetrust-banner-sdk",
+                    "#onetrust-consent-sdk",
+                    ".onetrust-pc-dark-filter"
+                ],
+                "rejectButtons": [
+                    "#onetrust-reject-all-handler",
+                    ".onetrust-close-btn-handler",
+                    "button[aria-label*='Reject']",
+                    "button[aria-label*='Decline']"
+                ],
+                "acceptButtons": [
+                    "#onetrust-accept-btn-handler"
+                ]
+            },
+            "tcf": true
+        },
+        {
+            "name": "Cookiebot",
+            "selectors": {
+                "container": [
+                    "#CybotCookiebotDialog",
+                    "#CybotCookiebotDialogBodyUnderlay"
+                ],
+                "rejectButtons": [
+                    "#CybotCookiebotDialogBodyButtonDecline",
+                    "#CybotCookiebotDialogBodyLevelButtonLevelOptinDeclineAll",
+                    "a[data-cb-action='decline']"
+                ],
+                "acceptButtons": [
+                    "#CybotCookiebotDialogBodyButtonAccept",
+                    "#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll"
+                ]
+            },
+            "tcf": true
+        },
+        {
+            "name": "Quantcast",
+            "selectors": {
+                "container": [
+                    "#qc-cmp2-container",
+                    ".qc-cmp2-summary-buttons"
+                ],
+                "rejectButtons": [
+                    "button[mode='secondary']",
+                    ".qc-cmp2-summary-buttons button:last-child"
+                ],
+                "acceptButtons": [
+                    "button[mode='primary']"
+                ]
+            },
+            "tcf": true
+        },
+        {
+            "name": "TrustArc",
+            "selectors": {
+                "container": [
+                    "#truste-consent-track",
+                    "#truste-consent-content",
+                    ".truste_overlay"
+                ],
+                "rejectButtons": [
+                    ".truste-button2",
+                    "#truste-consent-required",
+                    "a.decline"
+                ],
+                "acceptButtons": [
+                    "#truste-consent-button",
+                    ".truste-button1"
+                ]
+            },
+            "tcf": true
+        },
+        {
+            "name": "Didomi",
+            "selectors": {
+                "container": [
+                    "#didomi-host",
+                    ".didomi-consent-popup",
+                    "#didomi-popup"
+                ],
+                "rejectButtons": [
+                    "#didomi-notice-disagree-button",
+                    "button[aria-label*='disagree']",
+                    "button[aria-label*='refuse']"
+                ],
+                "acceptButtons": [
+                    "#didomi-notice-agree-button"
+                ]
+            },
+            "tcf": true
+        },
+        {
+            "name": "CookieFirst",
+            "selectors": {
+                "container": [
+                    ".cookiefirst-root",
+                    "#cookiefirst-root"
+                ],
+                "rejectButtons": [
+                    "button[data-cookiefirst-action='reject']",
+                    ".cf-button-reject"
+                ],
+                "acceptButtons": [
+                    "button[data-cookiefirst-action='accept']"
+                ]
+            },
+            "tcf": false
+        },
+        {
+            "name": "Sourcepoint",
+            "selectors": {
+                "container": [
+                    "div[id^='sp_message_container']",
+                    ".sp_message_container"
+                ],
+                "rejectButtons": [
+                    "button[title*='reject']",
+                    "button[title*='Reject']",
+                    "button[aria-label*='reject']"
+                ],
+                "acceptButtons": [
+                    "button[title*='Accept']",
+                    "button[title*='agree']"
+                ]
+            },
+            "tcf": true
+        },
+        {
+            "name": "LiveRamp",
+            "selectors": {
+                "container": [
+                    ".ats-cmp-ui",
+                    "#ats-cmp"
+                ],
+                "rejectButtons": [
+                    ".ats-reject-btn",
+                    "button[data-action='reject']"
+                ],
+                "acceptButtons": [
+                    ".ats-accept-btn"
+                ]
+            },
+            "tcf": true
+        },
+        {
+            "name": "Osano",
+            "selectors": {
+                "container": [
+                    ".osano-cm-dialog",
+                    ".osano-cm-window"
+                ],
+                "rejectButtons": [
+                    ".osano-cm-deny",
+                    "button.osano-cm-deny-all"
+                ],
+                "acceptButtons": [
+                    ".osano-cm-accept-all"
+                ]
+            },
+            "tcf": false
+        },
+        {
+            "name": "Termly",
+            "selectors": {
+                "container": [
+                    "#termly-code-snippet-support",
+                    ".termly-consent-banner"
+                ],
+                "rejectButtons": [
+                    "button[data-action='decline']",
+                    ".t-decline-all-btn"
+                ],
+                "acceptButtons": [
+                    ".t-accept-all-btn"
+                ]
+            },
+            "tcf": false
+        },
+        {
+            "name": "Iubenda",
+            "selectors": {
+                "container": [
+                    "#iubenda-cs-banner",
+                    ".iubenda-cs-container"
+                ],
+                "rejectButtons": [
+                    ".iubenda-cs-reject-btn",
+                    "a.iub-cmp-reject-btn"
+                ],
+                "acceptButtons": [
+                    ".iubenda-cs-accept-btn"
+                ]
+            },
+            "tcf": true
+        },
+        {
+            "name": "Sirdata",
+            "selectors": {
+                "container": [
+                    "#sd-cmp",
+                    ".sd-cmp-container"
+                ],
+                "rejectButtons": [
+                    "#sd-cmp-reject",
+                    "button[data-sd-action='reject']"
+                ],
+                "acceptButtons": [
+                    "#sd-cmp-accept"
+                ]
+            },
+            "tcf": true
+        },
+        {
+            "name": "Klaro",
+            "selectors": {
+                "container": [
+                    ".klaro",
+                    ".klaro .cookie-modal"
+                ],
+                "rejectButtons": [
+                    ".cm-btn-decline",
+                    "button.cn-decline"
+                ],
+                "acceptButtons": [
+                    ".cm-btn-accept-all"
+                ]
+            },
+            "tcf": false
+        },
+        {
+            "name": "Complianz",
+            "selectors": {
+                "container": [
+                    ".cmplz-cookiebanner",
+                    "#cmplz-cookiebanner-container"
+                ],
+                "rejectButtons": [
+                    ".cmplz-deny",
+                    "button.cmplz-btn.cmplz-deny"
+                ],
+                "acceptButtons": [
+                    ".cmplz-accept"
+                ]
+            },
+            "tcf": false
+        },
+        {
+            "name": "CookieYes",
+            "selectors": {
+                "container": [
+                    ".cky-consent-container",
+                    "#cookie-law-info-bar"
+                ],
+                "rejectButtons": [
+                    ".cky-btn-reject",
+                    "#cookie_action_close_header_reject"
+                ],
+                "acceptButtons": [
+                    ".cky-btn-accept",
+                    "#cookie_action_close_header"
+                ]
+            },
+            "tcf": false
+        }
+    ],
+    "genericRejectPatterns": {
+        "en": [
+            "reject all",
+            "reject",
+            "decline",
+            "decline all",
+            "deny",
+            "deny all",
+            "refuse",
+            "refuse all",
+            "only necessary",
+            "necessary only",
+            "essential only",
+            "no thanks",
+            "no, thanks"
+        ],
+        "nl": [
+            "alles weigeren",
+            "weigeren",
+            "afwijzen",
+            "alleen noodzakelijk",
+            "nee bedankt",
+            "weiger alles",
+            "niet akkoord"
+        ],
+        "de": [
+            "alle ablehnen",
+            "ablehnen",
+            "nur notwendige",
+            "nein danke",
+            "nicht zustimmen"
+        ],
+        "fr": [
+            "tout refuser",
+            "refuser",
+            "refuser tout",
+            "continuer sans accepter",
+            "non merci"
+        ],
+        "es": [
+            "rechazar todo",
+            "rechazar",
+            "solo necesarias",
+            "no gracias"
+        ],
+        "it": [
+            "rifiuta tutto",
+            "rifiuta",
+            "solo necessari",
+            "no grazie"
+        ],
+        "pt": [
+            "rejeitar tudo",
+            "rejeitar",
+            "apenas necessários",
+            "não obrigado"
+        ],
+        "pl": [
+            "odrzuć wszystko",
+            "odrzuć",
+            "tylko niezbędne"
+        ],
+        "sv": [
+            "avvisa alla",
+            "avvisa",
+            "endast nödvändiga"
+        ]
+    },
+    "genericClosePatterns": [
+        "close",
+        "×",
+        "✕",
+        "x",
+        "sluiten",
+        "schließen",
+        "fermer",
+        "cerrar",
+        "chiudi"
+    ],
+    "safeguardKeywords": {
+        "exclude": [
+            "checkout",
+            "payment",
+            "cart",
+            "basket",
+            "sign in",
+            "log in",
+            "login",
+            "register",
+            "subscribe",
+            "newsletter",
+            "account",
+            "order",
+            "betalen",
+            "winkelwagen",
+            "inloggen",
+            "aanmelden"
+        ],
+        "require": [
+            "cookie",
+            "consent",
+            "privacy",
+            "gdpr",
+            "tracking",
+            "personali",
+            "third party",
+            "vendors",
+            "partners",
+            "legitimate interest",
+            "analytics",
+            "advertising",
+            "marketing",
+            "preferences"
+        ]
+    }
+}

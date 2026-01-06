@@ -1,0 +1,64 @@
+{
+  "manifest_version": 3,
+  "name": "Consent Breaker",
+  "version": "1.0.0",
+  "description": "Auto-reject cookie consent banners. Focus op TCF/IAB CMP's en custom banners.",
+  "permissions": [
+    "storage",
+    "declarativeNetRequest",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "service_worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "content/dom_utils.js",
+        "content/tcf_enforcer.js",
+        "content/banner_slayer.js",
+        "content/bootstrap.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["content/tcf_injected.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "tracking_rules",
+        "enabled": true,
+        "path": "rules/dnr_rules_tracking.json"
+      },
+      {
+        "id": "consent_sync_rules",
+        "enabled": true,
+        "path": "rules/dnr_rules_consent_sync.json"
+      }
+    ]
+  },
+  "options_page": "options/options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    },
+    "default_title": "Consent Breaker"
+  }
+}

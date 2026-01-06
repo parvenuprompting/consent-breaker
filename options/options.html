@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consent Breaker - Instellingen</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🛡️ Consent Breaker</h1>
+      <p class="subtitle">Cookie consent banners automatisch weigeren</p>
+    </header>
+
+    <main>
+      <!-- Global Toggle -->
+      <section class="card">
+        <h2>Algemeen</h2>
+        <div class="setting-row">
+          <div class="setting-info">
+            <label for="globalEnabled">Extensie actief</label>
+            <span class="hint">Schakel de extensie globaal in of uit</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="globalEnabled" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <label for="debugMode">Debug modus</label>
+            <span class="hint">Log acties naar de browser console</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="debugMode">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Allowlist -->
+      <section class="card">
+        <h2>Allowlist</h2>
+        <p class="hint">Sites waar de extensie uitgeschakeld is (banners blijven staan)</p>
+        
+        <div class="input-group">
+          <input type="text" id="newDomain" placeholder="voorbeeld.nl">
+          <button id="addDomain" class="btn btn-primary">Toevoegen</button>
+        </div>
+        
+        <ul id="allowlist" class="domain-list">
+          <!-- Dynamically populated -->
+        </ul>
+        
+        <p id="emptyAllowlist" class="empty-state">Geen sites in allowlist</p>
+      </section>
+
+      <!-- Export/Import -->
+      <section class="card">
+        <h2>Data</h2>
+        <div class="button-group">
+          <button id="exportSettings" class="btn btn-secondary">Exporteer instellingen</button>
+          <button id="importSettings" class="btn btn-secondary">Importeer instellingen</button>
+          <input type="file" id="importFile" accept=".json" style="display: none;">
+        </div>
+      </section>
+
+      <!-- Stats (minimal) -->
+      <section class="card">
+        <h2>Statistieken</h2>
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-value" id="statBanners">0</span>
+            <span class="stat-label">Banners verwijderd</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="statSites">0</span>
+            <span class="stat-label">Sites verwerkt</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Consent Breaker v1.0.0 · <a href="https://github.com" target="_blank">GitHub</a></p>
+    </footer>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
