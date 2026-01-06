@@ -140,7 +140,7 @@ const BannerSlayer = {
         if (DOM.isOverlay(element)) score += 20;
         if (DOM.hasScrollLock()) score += 10;
 
-        // Text
+        // Text Analysis
         const text = (element.innerText || '').toLowerCase();
 
         // Strong Keywords (Dutch/English)
@@ -251,11 +251,23 @@ const BannerSlayer = {
     },
 
     observeDOM() {
-        const observer = new MutationObserver(() => {
-            clearTimeout(this.scanTimeout);
+        // Initial fast scan to catch banners that load slightly later
+        const fastScan = setInterval(() => this.scan(), 1000);
+        setTimeout(() => clearInterval(fastScan), 12000); // 12 seconds aggressive scan
+
+        const observer = new MutationObserver((mutations) => {
+            // Simple debounce
+            if (this.scanTimeout) clearTimeout(this.scanTimeout);
             this.scanTimeout = setTimeout(() => this.scan(), 500);
         });
-        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Deep observation
+        observer.observe(document.body || document.documentElement, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class']
+        });
     },
 
     sleep(ms) { return new Promise(r => setTimeout(r, ms)); },
