@@ -142,14 +142,38 @@ const BannerSlayer = {
 
         // Text
         const text = (element.innerText || '').toLowerCase();
+
+        // Strong Keywords (Dutch/English)
+        const strongKeywords = ['weiger', 'reject', 'decline', 'alles weigeren', 'alleen noodzakelijk'];
+        let hasStrongKeyword = false;
+        strongKeywords.forEach(k => { if (text.includes(k)) hasStrongKeyword = true; });
+
+        // General Keywords
+        const keywords = ['cookie', 'consent', 'accept', 'privacy', 'partner', 'instellen', 'toestemming'];
         let textScore = 0;
-        const keywords = ['cookie', 'consent', 'accept', 'privacy', 'partner'];
         keywords.forEach(k => { if (text.includes(k)) textScore += 5; });
 
         if (score < 10 && textScore > 0) textScore = 0;
         score += Math.min(textScore, 25);
 
-        if (element.querySelector('button, a[role="button"]')) score += 5;
+        // Button Analysis
+        const buttons = element.querySelectorAll('button, a, .btn, [role="button"]');
+        let hasRejectBtn = false;
+        let hasAction = false;
+
+        buttons.forEach(btn => {
+            hasAction = true;
+            const bText = (btn.innerText || '').toLowerCase();
+            if (bText.includes('reject') || bText.includes('weiger') || bText.includes('decline') || bText.includes('noodzakelijk')) {
+                hasRejectBtn = true;
+            }
+        });
+
+        if (hasAction) score += 5;
+
+        // Crucial: Boost score if explicit reject capability is found
+        if (hasRejectBtn) score += 40;
+        if (hasStrongKeyword) score += 10;
 
         // Safeguards
         if (text.includes('checkout') || text.includes('log in') || text.includes('sign in')) {
@@ -198,7 +222,7 @@ const BannerSlayer = {
         const buttons = container.querySelectorAll('button, a, .btn');
         for (const btn of buttons) {
             const txt = (btn.innerText || '').toLowerCase();
-            if (txt.includes('reject') || txt.includes('weiger') || txt.includes('decline')) {
+            if (txt.includes('reject') || txt.includes('weiger') || txt.includes('decline') || txt.includes('noodzakelijk')) {
                 DOM.safeClick(btn);
                 return true;
             }
