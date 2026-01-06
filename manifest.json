@@ -34,7 +34,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "content/tcf_injected.js"
+        "content/tcf_injected.js",
+        "content/cmp_signatures.json"
       ],
       "matches": [
         "<all_urls>"

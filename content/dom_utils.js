@@ -1,9 +1,48 @@
 /**
  * Consent Breaker - DOM Utilities
- * Safe DOM manipulation helpers for content scripts.
+ * Safe DOM manipulation helpers with Shadow DOM support.
  */
 
 const DOMUtils = {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Shadow DOM & Deep Querying
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Recursively search for elements across all Shadow DOMs.
+     * @param {string} selector - CSS selector
+     * @param {Node} root - Root node to start search (default: document)
+     * @returns {Element[]} Array of found elements
+     */
+    deepQuerySelectorAll(selector, root = document) {
+        const results = [];
+
+        // 1. Search current root
+        try {
+            results.push(...Array.from(root.querySelectorAll(selector)));
+        } catch (e) {
+            // Selector might be invalid for this context
+        }
+
+        // 2. Find all hosts with shadow roots in this level
+        // Note: TreeWalker is faster than recursive querySelector('*')
+        const walker = document.createTreeWalker(
+            root === document ? document.body : root,
+            NodeFilter.SHOW_ELEMENT,
+            null,
+            false
+        );
+
+        while (walker.nextNode()) {
+            const el = walker.currentNode;
+            if (el.shadowRoot) {
+                results.push(...this.deepQuerySelectorAll(selector, el.shadowRoot));
+            }
+        }
+
+        return results;
+    },
+
     // ─────────────────────────────────────────────────────────────────────────
     // Element Visibility
     // ─────────────────────────────────────────────────────────────────────────
@@ -11,12 +50,16 @@ const DOMUtils = {
     isVisible(element) {
         if (!element) return false;
 
+        // Handle Shadow DOM elements (they have no offsetParent sometimes)
+        // Check getBoundingClientRect instead
+        const rect = element.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) return false;
+
         const style = window.getComputedStyle(element);
         return (
             style.display !== 'none' &&
             style.visibility !== 'hidden' &&
-            style.opacity !== '0' &&
-            element.offsetParent !== null
+            style.opacity !== '0'
         );
     },
 
@@ -58,32 +101,29 @@ const DOMUtils = {
         const results = [];
         const searchText = text.toLowerCase();
 
-        try {
-            const elements = document.querySelectorAll(selector);
+        // Use deep query
+        const elements = this.deepQuerySelectorAll(selector);
 
-            for (const el of elements) {
-                // Check direct text content (not children)
-                const directText = Array.from(el.childNodes)
-                    .filter(node => node.nodeType === Node.TEXT_NODE)
-                    .map(node => node.textContent)
-                    .join('')
-                    .toLowerCase();
+        for (const el of elements) {
+            // Check direct text content (not children)
+            const directText = Array.from(el.childNodes)
+                .filter(node => node.nodeType === Node.TEXT_NODE)
+                .map(node => node.textContent)
+                .join('')
+                .toLowerCase();
 
-                if (directText.includes(searchText)) {
+            if (directText.includes(searchText)) {
+                results.push(el);
+                continue;
+            }
+
+            // Check innerText for buttons/links
+            if (el.tagName === 'BUTTON' || el.tagName === 'A' ||
+                el.getAttribute('role') === 'button') {
+                if (el.innerText?.toLowerCase().includes(searchText)) {
                     results.push(el);
-                    continue;
-                }
-
-                // Check innerText for buttons/links
-                if (el.tagName === 'BUTTON' || el.tagName === 'A' ||
-                    el.getAttribute('role') === 'button') {
-                    if (el.innerText?.toLowerCase().includes(searchText)) {
-                        results.push(el);
-                    }
                 }
             }
-        } catch (e) {
-            // Selector might be invalid
         }
 
         return results;

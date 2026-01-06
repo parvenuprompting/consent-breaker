@@ -1,6 +1,6 @@
 /**
  * Consent Breaker - Banner Slayer
- * V2: Mode-driven with reporting
+ * V2: Mode-driven with reporting + Shadow DOM Support
  */
 
 const BannerSlayer = {
@@ -54,10 +54,11 @@ const BannerSlayer = {
         const DOM = window.ConsentBreakerDOM;
         if (!DOM) return;
 
-        // 1. Known CMPs
+        // 1. Known CMPs (Updated to use deep search if needed, though most signatures are global)
+        // For now, signatures reuse querySelector, but we could upgrade them to deepQuerySelectorAll if needed.
         if (await this.handleKnownCMPs()) return;
 
-        // 2. Heuristics
+        // 2. Heuristics (Now using Deep Search)
         const candidates = this.findCandidates();
         for (const cand of candidates) {
             if (this.processed.has(cand.element)) continue;
@@ -78,6 +79,9 @@ const BannerSlayer = {
     async handleKnownCMPs() {
         if (!this.signatures?.cmpProviders) return false;
         const DOM = window.ConsentBreakerDOM;
+
+        // Note: To support Shadow DOM signatures, deepQuerySelectorAll would be needed here too.
+        // For now, we assume known CMPs are mostly in Light DOM, but heuristics scan Shadow.
 
         for (const cmp of this.signatures.cmpProviders) {
             let container = null;
@@ -121,7 +125,13 @@ const BannerSlayer = {
       [id*="cookie"], [id*="consent"], [id*="gdpr"], [id*="cmp"], [id*="notice"], [role="dialog"], [role="alertdialog"]
     `;
 
-        document.querySelectorAll(selector).forEach(el => {
+        // USE DEEP SEARCH NOW
+        const elements = DOM.deepQuerySelectorAll(selector);
+
+        elements.forEach(el => {
+            // Element might have been removed during iteration
+            if (!el.isConnected) return;
+
             if (!DOM.isVisible(el) || this.processed.has(el)) return;
             const score = this.scoreElement(el);
             if (score > 10) candidates.push({ element: el, score });
@@ -140,16 +150,15 @@ const BannerSlayer = {
         if (DOM.isOverlay(element)) score += 20;
         if (DOM.hasScrollLock()) score += 10;
 
-        // Text Analysis
-        const text = (element.innerText || '').toLowerCase();
+        // Text Analysis (Handle Shadow DOM content access safely)
+        const text = (element.innerText || element.textContent || '').toLowerCase();
 
         // Strong Reject Keywords
         const rejectKeywords = ['weiger', 'reject', 'decline', 'alles weigeren', 'alleen noodzakelijk'];
         let hasRejectKey = false;
         rejectKeywords.forEach(k => { if (text.includes(k)) hasRejectKey = true; });
 
-        // Strong Accept/Confirmation Keywords (Signals "This IS a banner")
-        // "akkoord", "begrepen", "accept", "prima", "aanvaarden"
+        // Strong Accept/Confirmation Keywords
         const acceptKeywords = ['akkoord', 'accept', 'accepteren', 'begrepen', 'prima', 'aanvaarden', 'verder gaan'];
 
         // General Keywords
@@ -163,7 +172,7 @@ const BannerSlayer = {
         // Button Analysis
         const buttons = element.querySelectorAll('button, a, .btn, [role="button"], input[type="button"], input[type="submit"]');
         let hasRejectBtn = false;
-        let hasAcceptBtn = false; // New: Detect accept buttons too
+        let hasAcceptBtn = false;
         let hasAction = false;
 
         buttons.forEach(btn => {
@@ -182,11 +191,11 @@ const BannerSlayer = {
 
         // Boost scores
         if (hasRejectBtn) score += 40;
-        else if (hasAcceptBtn) score += 30; // Accept button strongly implies it is a banner
+        else if (hasAcceptBtn) score += 30;
 
         if (hasRejectKey) score += 10;
 
-        // Safeguards (Do NOT remove login/checkout)
+        // Safeguards
         if (text.includes('checkout') || text.includes('log in') || text.includes('sign in') || text.includes('wachtwoord')) {
             score -= 100; // Strong penalty
         }
@@ -219,16 +228,11 @@ const BannerSlayer = {
         }
 
         // 3. Fallback: Removal (Slay)
-        // In Extreme: Always remove if score > threshold
-        // In Normal: Only remove if we are VERY sure (score > 80) OR if it matches "Accept Only" pattern
-        // Update logic: If it has Akkoord button (score += 30) and structural (20+20) + text (10) -> Score ~80.
-
         const shouldRemove = (this.mode === 'extreme' && cand.score >= 40) ||
-            (this.mode === 'normal' && cand.score >= 70); // Lowered from 80 to catch Akkoord-only banners
+            (this.mode === 'normal' && cand.score >= 70);
 
         if (shouldRemove) {
             DOM.hideElement(el);
-            // Also look for separate backdrops
             const backdrop = document.querySelector('.modal-backdrop, .overlay, .backdrop');
             if (backdrop && DOM.isVisible(backdrop)) DOM.hideElement(backdrop);
 
@@ -281,6 +285,8 @@ const BannerSlayer = {
             this.scanTimeout = setTimeout(() => this.scan(), 500);
         });
 
+        // Note: observe only works on light DOM root. For Shadow DOM, each root needs its own observer.
+        // This is complex. For V2, we rely on the periodic fastScan + main DOM changes triggering scans.
         observer.observe(document.body || document.documentElement, {
             childList: true,
             subtree: true,
