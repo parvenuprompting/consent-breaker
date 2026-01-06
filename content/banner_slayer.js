@@ -116,9 +116,10 @@ const BannerSlayer = {
     findCandidates() {
         const DOM = window.ConsentBreakerDOM;
         const candidates = [];
+        // Added [class*="cmp"] and [id*="cmp"]
         const selector = `
-      [class*="cookie"], [class*="consent"], [class*="gdpr"], [class*="privacy"],
-      [id*="cookie"], [id*="consent"], [id*="gdpr"], [role="dialog"], [role="alertdialog"]
+      [class*="cookie"], [class*="consent"], [class*="gdpr"], [class*="privacy"], [class*="cmp"],
+      [id*="cookie"], [id*="consent"], [id*="gdpr"], [id*="cmp"], [role="dialog"], [role="alertdialog"]
     `;
 
         document.querySelectorAll(selector).forEach(el => {
@@ -148,8 +149,8 @@ const BannerSlayer = {
         let hasStrongKeyword = false;
         strongKeywords.forEach(k => { if (text.includes(k)) hasStrongKeyword = true; });
 
-        // General Keywords
-        const keywords = ['cookie', 'consent', 'accept', 'privacy', 'partner', 'instellen', 'toestemming'];
+        // General Keywords - Added 'cmp'
+        const keywords = ['cookie', 'consent', 'accept', 'privacy', 'partner', 'instellen', 'toestemming', 'cmp'];
         let textScore = 0;
         keywords.forEach(k => { if (text.includes(k)) textScore += 5; });
 
@@ -251,17 +252,17 @@ const BannerSlayer = {
     },
 
     observeDOM() {
-        // Initial fast scan to catch banners that load slightly later
+        // Aggressive observation for first 12 seconds
         const fastScan = setInterval(() => this.scan(), 1000);
-        setTimeout(() => clearInterval(fastScan), 12000); // 12 seconds aggressive scan
+        setTimeout(() => clearInterval(fastScan), 12000);
 
         const observer = new MutationObserver((mutations) => {
-            // Simple debounce
+            // Debounce scan
             if (this.scanTimeout) clearTimeout(this.scanTimeout);
             this.scanTimeout = setTimeout(() => this.scan(), 500);
         });
 
-        // Deep observation
+        // Observer options: subtree is crucial
         observer.observe(document.body || document.documentElement, {
             childList: true,
             subtree: true,
