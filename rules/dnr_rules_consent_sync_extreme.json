@@ -1,0 +1,115 @@
+[
+    {
+        "id": 2000,
+        "priority": 1,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "cookie-sync",
+            "resourceTypes": [
+                "xmlhttprequest",
+                "image",
+                "script"
+            ]
+        }
+    },
+    {
+        "id": 2001,
+        "priority": 1,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "consent-sync",
+            "resourceTypes": [
+                "xmlhttprequest",
+                "image",
+                "script"
+            ]
+        }
+    },
+    {
+        "id": 2002,
+        "priority": 1,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "/consent/update",
+            "resourceTypes": [
+                "xmlhttprequest"
+            ]
+        }
+    },
+    {
+        "id": 2003,
+        "priority": 1,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "/cmp/v2/",
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest"
+            ]
+        }
+    },
+    {
+        "id": 2004,
+        "priority": 1,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "trustarc.com",
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest"
+            ]
+        }
+    },
+    {
+        "id": 2005,
+        "priority": 1,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "onetrust.com",
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest"
+            ]
+        }
+    },
+    {
+        "id": 2006,
+        "priority": 1,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "cookiebot.com",
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest"
+            ]
+        }
+    },
+    {
+        "id": 2007,
+        "priority": 1,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "consensu.org",
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest"
+            ]
+        }
+    }
+]

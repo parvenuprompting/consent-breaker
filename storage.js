@@ -5,7 +5,7 @@
 
 const Storage = {
     // ─────────────────────────────────────────────────────────────────────────
-    // Sync Storage (settings that sync across devices)
+    // Sync Storage
     // ─────────────────────────────────────────────────────────────────────────
 
     async get(keys) {
@@ -25,6 +25,66 @@ const Storage = {
             console.error('[Storage] Error setting sync data:', error);
             return false;
         }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Mode Management (Normal vs Extreme)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Get the effective mode for a domain.
+     * Resolves global setting and per-domain overrides.
+     * @param {string} domain 
+     * @returns {Promise<string>} 'normal' | 'extreme'
+     */
+    async getModeForDomain(domain) {
+        const settings = await this.get({
+            globalEnabled: true,
+            filterMode: 'normal',
+            perDomainOverrides: {}
+        });
+
+        if (!settings.globalEnabled) return 'disabled';
+
+        const normalizedDomain = this.normalizeDomain(domain);
+        const override = settings.perDomainOverrides[normalizedDomain];
+
+        if (override && override.filterMode) {
+            return override.filterMode;
+        }
+
+        return settings.filterMode;
+    },
+
+    async getGlobalMode() {
+        const data = await this.get({ filterMode: 'normal' });
+        return data.filterMode;
+    },
+
+    async setGlobalMode(mode) {
+        if (!['normal', 'extreme'].includes(mode)) return false;
+        return await this.set({ filterMode: mode });
+    },
+
+    async setDomainMode(domain, mode) {
+        const settings = await this.get({ perDomainOverrides: {} });
+        const normalizedDomain = this.normalizeDomain(domain);
+
+        if (!settings.perDomainOverrides[normalizedDomain]) {
+            settings.perDomainOverrides[normalizedDomain] = {};
+        }
+
+        if (mode === 'default') {
+            delete settings.perDomainOverrides[normalizedDomain].filterMode;
+            // Cleanup if empty
+            if (Object.keys(settings.perDomainOverrides[normalizedDomain]).length === 0) {
+                delete settings.perDomainOverrides[normalizedDomain];
+            }
+        } else {
+            settings.perDomainOverrides[normalizedDomain].filterMode = mode;
+        }
+
+        return await this.set({ perDomainOverrides: settings.perDomainOverrides });
     },
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -102,7 +162,7 @@ const Storage = {
             }
 
             // Only import known keys
-            const validKeys = ['globalEnabled', 'debugMode', 'allowlist', 'stats'];
+            const validKeys = ['globalEnabled', 'debugMode', 'allowlist', 'stats', 'filterMode', 'perDomainOverrides'];
             const sanitized = {};
 
             for (const key of validKeys) {

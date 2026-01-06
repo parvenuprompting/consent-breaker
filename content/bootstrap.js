@@ -10,40 +10,39 @@
 
     const SCRIPT_ID = 'consent-breaker-bootstrap';
 
-    // Prevent double execution
     if (window[SCRIPT_ID]) return;
     window[SCRIPT_ID] = true;
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Debug Mode Setup
+    // Config
     // ─────────────────────────────────────────────────────────────────────────
 
-    async function checkDebugMode() {
-        try {
-            const response = await chrome.runtime.sendMessage({ type: 'GET_SETTINGS' });
-            if (response?.debugMode) {
-                window.__cbDebug = true;
-                localStorage.setItem('consent_breaker_debug', 'true');
-            }
-        } catch (e) {
-            // Extension context might be invalid (e.g., during update)
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Domain Check
-    // ─────────────────────────────────────────────────────────────────────────
-
-    async function isDomainAllowed() {
+    async function getConfig() {
         try {
             const response = await chrome.runtime.sendMessage({
-                type: 'CHECK_DOMAIN',
+                type: 'GET_MODE',
                 data: { domain: window.location.hostname }
             });
 
+            const debugResponse = await chrome.runtime.sendMessage({ type: 'GET_SETTINGS' });
+
+            return {
+                mode: response?.mode || 'normal',
+                debug: debugResponse?.debugMode || false
+            };
+        } catch (e) {
+            return { mode: 'normal', debug: false }; // Fail safe
+        }
+    }
+
+    async function checkDomainAllowed(domain) {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                type: 'CHECK_DOMAIN',
+                data: { domain }
+            });
             return response?.allowed !== false;
         } catch (e) {
-            // On error, proceed (fail-open for UX)
             return true;
         }
     }
@@ -53,45 +52,44 @@
     // ─────────────────────────────────────────────────────────────────────────
 
     async function main() {
-        // Check debug mode first
-        await checkDebugMode();
+        const config = await getConfig();
+
+        if (config.debug) {
+            window.__cbDebug = true;
+            localStorage.setItem('consent_breaker_debug', 'true');
+        }
 
         const log = (msg) => {
             if (window.__cbDebug) {
-                console.log(`[Consent Breaker] ${msg}`);
+                console.log(`[Consent Breaker] [${config.mode.toUpperCase()}] ${msg}`);
             }
         };
 
         log('Bootstrap starting...');
 
-        // Check if domain is allowed
-        const allowed = await isDomainAllowed();
-
-        if (!allowed) {
+        const allowed = await checkDomainAllowed(window.location.hostname);
+        if (!allowed && config.mode !== 'extreme') { // Allow extreme to override allowlist? No, respect allowlist always.
+            // Wait, allowlist is explicitly "disabled".
             log('Domain is allowlisted, skipping');
             return;
         }
 
-        // TCF Enforcer is already initialized at document_start
-        // (it injects synchronously for pre-emptive hook)
-
+        // TCF Enforcer
         const TCF = window.ConsentBreakerTCF;
         if (TCF) {
-            log('TCF enforcer active');
+            log('Initializing TCF enforcer');
+            TCF.init(config.mode);
         }
 
-        // Wait a bit for page to stabilize before banner slaying
-        // This gives TCF override time to work
         await new Promise(r => setTimeout(r, 100));
 
-        // Initialize banner slayer
+        // Banner Slayer
         const Banner = window.ConsentBreakerBanner;
         if (Banner) {
-            log('Starting banner slayer');
-            await Banner.init();
+            log('Initializing Banner slayer');
+            await Banner.init(config.mode);
         }
 
-        // Report site processed
         try {
             await chrome.runtime.sendMessage({
                 type: 'UPDATE_STATS',
@@ -99,32 +97,20 @@
             });
         } catch (e) { }
 
-        // Re-scan after full page load (catches late banners)
+        // Re-scans
         window.addEventListener('load', () => {
-            setTimeout(() => {
-                if (Banner) {
-                    log('Post-load re-scan');
-                    Banner.scan();
-                }
-            }, 1000);
+            setTimeout(() => Banner?.scan(), 1000);
         });
 
-        // Also re-scan after a delay (some CMPs load very late)
-        setTimeout(() => {
-            if (Banner) {
-                log('Delayed re-scan');
-                Banner.scan();
-            }
-        }, 3000);
-
-        log('Bootstrap complete');
+        // Aggressive re-scanning in EXTREME mode
+        if (config.mode === 'extreme') {
+            setInterval(() => Banner?.scan(), 2000); // Poll every 2s
+            log('Extreme polling active');
+        } else {
+            setTimeout(() => Banner?.scan(), 3000);
+        }
     }
 
-    // Execute
-    main().catch(err => {
-        if (window.__cbDebug) {
-            console.error('[Consent Breaker] Bootstrap error:', err);
-        }
-    });
+    main().catch(console.error);
 
 })();

@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="nl">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Consent Breaker - Instellingen</title>
   <link rel="stylesheet" href="options.css">
 </head>
+
 <body>
   <div class="container">
     <header>
@@ -14,79 +16,107 @@
     </header>
 
     <main>
-      <!-- Global Toggle -->
+      <!-- Global Controls -->
       <section class="card">
-        <h2>Algemeen</h2>
+        <h2>Global Settings</h2>
+
         <div class="setting-row">
           <div class="setting-info">
             <label for="globalEnabled">Extensie actief</label>
-            <span class="hint">Schakel de extensie globaal in of uit</span>
+            <span class="hint">Hoofdschakelaar</span>
           </div>
           <label class="toggle">
             <input type="checkbox" id="globalEnabled" checked>
             <span class="slider"></span>
           </label>
         </div>
-        <div class="setting-row">
-          <div class="setting-info">
-            <label for="debugMode">Debug modus</label>
-            <span class="hint">Log acties naar de browser console</span>
+
+        <div class="setting-row" style="display:block">
+          <div class="setting-info" style="margin-bottom:12px">
+            <label>Standaard Filter Modus</label>
+            <span class="hint">Bepaalt hoe agressief de extensie te werk gaat</span>
           </div>
-          <label class="toggle">
-            <input type="checkbox" id="debugMode">
-            <span class="slider"></span>
-          </label>
+
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" name="filterMode" id="modeNormal" value="normal">
+              <label for="modeNormal">
+                <strong>Normal (Aanbevolen)</strong>
+                <span class="radio-hint">Stabiel. Forceert TCF reject en verwijdert banners via knoppen.</span>
+              </label>
+            </div>
+
+            <div class="radio-option">
+              <input type="radio" name="filterMode" id="modeExtreme" value="extreme">
+              <label for="modeExtreme">
+                <strong>Extreme</strong>
+                <span class="radio-hint">Agressief. Sloophamer voor overlay's. Kan sites breken.</span>
+              </label>
+            </div>
+          </div>
         </div>
       </section>
 
       <!-- Allowlist -->
       <section class="card">
         <h2>Allowlist</h2>
-        <p class="hint">Sites waar de extensie uitgeschakeld is (banners blijven staan)</p>
-        
+        <p class="hint">Sites waar de extensie uitgeschakeld is</p>
+
         <div class="input-group">
           <input type="text" id="newDomain" placeholder="voorbeeld.nl">
           <button id="addDomain" class="btn btn-primary">Toevoegen</button>
         </div>
-        
+
         <ul id="allowlist" class="domain-list">
           <!-- Dynamically populated -->
         </ul>
-        
         <p id="emptyAllowlist" class="empty-state">Geen sites in allowlist</p>
       </section>
 
-      <!-- Export/Import -->
+      <!-- Advanced -->
       <section class="card">
-        <h2>Data</h2>
-        <div class="button-group">
-          <button id="exportSettings" class="btn btn-secondary">Exporteer instellingen</button>
-          <button id="importSettings" class="btn btn-secondary">Importeer instellingen</button>
+        <h2>Geavanceerd</h2>
+        <div class="setting-row">
+          <div class="setting-info">
+            <label for="debugMode">Debug modus</label>
+            <span class="hint">Toon technische logs in console</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="debugMode">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="button-group" style="margin-top:12px">
+          <button id="exportSettings" class="btn btn-secondary">Exporteer</button>
+          <button id="importSettings" class="btn btn-secondary">Importeer</button>
           <input type="file" id="importFile" accept=".json" style="display: none;">
         </div>
       </section>
 
-      <!-- Stats (minimal) -->
+      <!-- Stats -->
       <section class="card">
         <h2>Statistieken</h2>
         <div class="stats">
           <div class="stat">
             <span class="stat-value" id="statBanners">0</span>
-            <span class="stat-label">Banners verwijderd</span>
+            <span class="stat-label">Banners</span>
           </div>
           <div class="stat">
             <span class="stat-value" id="statSites">0</span>
-            <span class="stat-label">Sites verwerkt</span>
+            <span class="stat-label">Sites</span>
           </div>
         </div>
       </section>
     </main>
 
     <footer>
-      <p>Consent Breaker v1.0.0 · <a href="https://github.com" target="_blank">GitHub</a></p>
+      <p>Consent Breaker v1.1.0 · <a href="https://github.com/parvenuprompting/consent-breaker"
+          target="_blank">GitHub</a></p>
     </footer>
   </div>
 
   <script src="options.js"></script>
 </body>
+
 </html>

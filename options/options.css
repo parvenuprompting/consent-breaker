@@ -311,3 +311,36 @@ input:checked + .slider::before {
   font-size: 0.8rem;
   color: var(--text-secondary);
 }
+/* Additions for Options CSS */
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--bg-primary);
+    padding: 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.radio-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.radio-option input[type="radio"] {
+    margin-top: 4px;
+}
+
+.radio-option label {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.radio-hint {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+}

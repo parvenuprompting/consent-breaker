@@ -1,6 +1,42 @@
-# 🧪 Testplan Consent Breaker
+# 🧪 Testplan Consent Breaker (v1.1.0)
 
-## Test Sites (15+ verdeeld over categorieën)
+## Nieuwe Filter Modi Testing
+
+### Setup
+1. Open extensie opties (rechtermuisknop op icoon -> Opties).
+2. Verifieer dat "Standaard Filter Modus" op **Normal** staat.
+
+### VS-1: Normal Mode Verificatie
+**Doel:** Stabiliteit, geen site breakage.
+1. Bezoek `theguardian.com`.
+   - [ ] Banner verdwijnt.
+   - [ ] Scroll werkt.
+2. Bezoek `components-ui.com` (of een site met TCF).
+   - [ ] TCF override werkt (check console logs indien debug aan).
+3. Bezoek site met video embeds (bijv. nieuwsartikel met youtube).
+   - [ ] Video speelt af.
+
+### VS-2: Extreme Mode Verificatie
+**Doel:** Agressieve verwijdering.
+1. Bezoek een hardnekkige site (waarvan Normal misschien faalt, of gebruik testpagina).
+   - [ ] Klik op extensie icoon -> Selecteer "Extreme" -> Pagina reload automatisch(of handmatig).
+   - [ ] Banner die eerst bleef, moet nu weg zijn.
+   - [ ] Check console: `[Consent Breaker] [EXTREME] ...`
+2. Check `dnr_rules_tracking_extreme.json` regels:
+   - [ ] Network tab: zie block van extra domeinen (indien van toepassing op de site).
+
+### VS-3: Per-Site Override
+1. Zet global mode op **Normal**.
+2. Ga naar `nu.nl`.
+3. Open popup, zet op **Extreme**.
+4. Reload pagina.
+   - [ ] Extensie gedraagt zich als Extreme op `nu.nl`.
+5. Open nieuwe tab naar `ad.nl`.
+   - [ ] Extensie gedraagt zich als Normal (global default).
+
+---
+
+## Regressie Testen (Bestaande features)
 
 ### TCF/IAB CMP Sites
 | # | Site | CMP | Expected |
@@ -8,99 +44,23 @@
 | 1 | theguardian.com | Sourcepoint | Banner weg, scroll werkt |
 | 2 | spiegel.de | Sourcepoint | Banner weg, artikelen laden |
 | 3 | lemonde.fr | Didomi | Banner weg, video's werken |
-| 4 | independent.co.uk | OneTrust | Banner weg, ads geblokkeerd |
-| 5 | telegraph.co.uk | OneTrust | Banner weg (mogelijk paywall) |
-
-### OneTrust-achtige Banners
-| # | Site | Expected |
-|---|------|----------|
-| 6 | cnn.com | Reject button gevonden en geklikt |
-| 7 | bbc.com | Banner verwijderd, video's werken |
-| 8 | nytimes.com | Banner verwijderd (mogelijk paywall) |
-
-### Cookiebot Sites
-| # | Site | Expected |
-|---|------|----------|
-| 9 | medium.com | Decline button geklikt |
-| 10 | booking.com | Banner weg, zoeken werkt |
 
 ### Custom/Dark Pattern Banners
 | # | Site | Expected |
 |---|------|----------|
 | 11 | nu.nl | Nederlandse banner verwijderd |
 | 12 | ad.nl | Banner weg, artikelen laden |
-| 13 | rtl.nl | Banner verwijderd via heuristiek |
-| 14 | tweakers.net | Cookie banner weg |
-
-### Video Embed Test Sites
-| # | Site | Expected |
-|---|------|----------|
-| 15 | youtube.com (embedded) | Video's spelen, consent prompt weg |
-| 16 | vimeo.com | Videos laden correct |
-
-## Test Procedure
-
-### Per site checken:
-
-```markdown
-[ ] Banner is verdwenen (< 3 seconden)
-[ ] Scroll werkt (body overflow: auto)
-[ ] Geen accept-all getriggerd (check cookies)
-[ ] Site functionaliteit intact:
-    [ ] Navigatie werkt
-    [ ] Content laadt
-    [ ] Video's spelen
-    [ ] Forms werken
-[ ] DevTools Network:
-    [ ] Tracking endpoints geblokkeerd (rood)
-    [ ] Site content laadt (groen/200)
-```
 
 ### Debug Check:
-1. Schakel Debug mode in via Options
-2. Open DevTools → Console
-3. Filter op `[Consent Breaker]`
-4. Bekijk welke acties uitgevoerd zijn
+1. Schakel Debug mode in.
+2. Filter console op `[Consent Breaker]`.
+3. Verifieer modus label in logs: `[NORMAL]` of `[EXTREME]`.
 
-### Network Check:
-1. Open DevTools → Network
-2. Filter op "Blocked"
-3. Verify: google-analytics, facebook/tr, etc.
+## Expected Results Matrix (Update)
 
-## Expected Results Matrix
-
-| Test | Pass Criteria |
-|------|---------------|
-| TCF Override | `__tcfapi` retourneert reject-all data |
-| CMP UI Reject | Reject button werd geklikt |
-| Heuristic Removal | Overlay verwijderd met score > 60 |
-| Scroll Restore | body/html overflow niet "hidden" |
-| Network Block | Tracking requests tonen "blocked" |
-| No Accept | Geen consent cookies gezet |
-
-## Edge Cases
-
-### Legitieme modals (NIET verwijderen)
-- Login dialogen
-- Checkout flows
-- Newsletter popups (zonder consent keywords)
-- Age verification
-
-### Te testen:
-```markdown
-[ ] Login modal op reddit.com blijft staan
-[ ] Checkout op bol.com werkt
-[ ] Paywall op nrc.nl verschijnt nog
-```
-
-## Troubleshooting Resultaten
-
-### Als banner niet verdwijnt:
-1. Check debug logs voor detection
-2. Check of site in allowlist staat
-3. Check of CMP dynamisch laadt (late injection)
-
-### Als site kapot is:
-1. Voeg toe aan allowlist
-2. Check welke network requests geblokkeerd zijn
-3. Rapporteer als bug met site URL + screenshots
+| Test | Normal Criteria | Extreme Criteria |
+|------|-----------------|------------------|
+| TCF Fallback | Geen actie bij fail | Assume reject, kill UI |
+| Banner Threshold | Score >= 60 | Score >= 40 |
+| Action Retry | 0 retries | 3 retries (aggressive polling) |
+| Network Block | 20+20 basis regels | +10+8 extra aggressive regels |

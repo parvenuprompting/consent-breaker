@@ -1,6 +1,6 @@
 /**
  * Consent Breaker - Options Page JS
- * MVP: global toggle, allowlist management, debug mode, export/import
+ * MVP: global toggle, allowlist management, debug mode, export/import, filter modes
  */
 
 document.addEventListener('DOMContentLoaded', init);
@@ -18,6 +18,7 @@ async function loadSettings() {
     const defaults = {
         globalEnabled: true,
         debugMode: false,
+        filterMode: 'normal',
         allowlist: [],
         stats: { bannersBlocked: 0, sitesProcessed: 0 }
     };
@@ -25,10 +26,14 @@ async function loadSettings() {
     try {
         const settings = await chrome.storage.sync.get(defaults);
 
-        // Global enabled toggle
+        // Global toggle
         document.getElementById('globalEnabled').checked = settings.globalEnabled;
 
-        // Debug mode toggle
+        // Filter mode radio
+        const mode = settings.filterMode || 'normal';
+        document.querySelector(`input[name="filterMode"][value="${mode}"]`).checked = true;
+
+        // Debug mode
         document.getElementById('debugMode').checked = settings.debugMode;
 
         // Allowlist
@@ -52,21 +57,31 @@ function bindEvents() {
         await chrome.storage.sync.set({ globalEnabled: e.target.checked });
     });
 
+    // Filter mode radios
+    document.querySelectorAll('input[name="filterMode"]').forEach(radio => {
+        radio.addEventListener('change', async (e) => {
+            await chrome.runtime.sendMessage({
+                type: 'SET_GLOBAL_MODE',
+                data: { mode: e.target.value }
+            });
+            // Also sync standard storage if message handler doesn't fully cover persist
+            // (The SW handler does persist it, so we strictly don't need to manually set here if message succeeds)
+        });
+    });
+
     // Debug toggle
     document.getElementById('debugMode').addEventListener('change', async (e) => {
         await chrome.storage.sync.set({ debugMode: e.target.checked });
     });
 
-    // Add domain
+    // Allowlist
     document.getElementById('addDomain').addEventListener('click', addDomain);
     document.getElementById('newDomain').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') addDomain();
     });
 
-    // Export
+    // Export/Import
     document.getElementById('exportSettings').addEventListener('click', exportSettings);
-
-    // Import
     document.getElementById('importSettings').addEventListener('click', () => {
         document.getElementById('importFile').click();
     });
@@ -74,20 +89,18 @@ function bindEvents() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Allowlist
+// Allowlist (unchanged logic)
 // ─────────────────────────────────────────────────────────────────────────────
 
 function renderAllowlist(allowlist) {
     const list = document.getElementById('allowlist');
     const emptyState = document.getElementById('emptyAllowlist');
-
     list.innerHTML = '';
 
     if (!allowlist || allowlist.length === 0) {
         emptyState.style.display = 'block';
         return;
     }
-
     emptyState.style.display = 'none';
 
     for (const domain of allowlist) {
@@ -99,7 +112,6 @@ function renderAllowlist(allowlist) {
         list.appendChild(li);
     }
 
-    // Bind remove buttons
     list.querySelectorAll('.btn-danger').forEach(btn => {
         btn.addEventListener('click', () => removeDomain(btn.dataset.domain));
     });
@@ -108,33 +120,18 @@ function renderAllowlist(allowlist) {
 async function addDomain() {
     const input = document.getElementById('newDomain');
     let domain = input.value.trim();
-
     if (!domain) return;
-
-    // Normalize domain
     domain = normalizeDomain(domain);
-
-    if (!isValidDomain(domain)) {
-        alert('Ongeldig domein');
-        return;
-    }
+    if (!isValidDomain(domain)) { alert('Ongeldig domein'); return; }
 
     try {
         const { allowlist = [] } = await chrome.storage.sync.get({ allowlist: [] });
-
-        if (allowlist.includes(domain)) {
-            alert('Dit domein staat al in de allowlist');
-            return;
-        }
-
+        if (allowlist.includes(domain)) { alert('Reeds in lijst'); return; }
         allowlist.push(domain);
         await chrome.storage.sync.set({ allowlist });
-
         renderAllowlist(allowlist);
         input.value = '';
-    } catch (error) {
-        console.error('Failed to add domain:', error);
-    }
+    } catch (error) { console.error(error); }
 }
 
 async function removeDomain(domain) {
@@ -143,91 +140,43 @@ async function removeDomain(domain) {
         const filtered = allowlist.filter(d => d !== domain);
         await chrome.storage.sync.set({ allowlist: filtered });
         renderAllowlist(filtered);
-    } catch (error) {
-        console.error('Failed to remove domain:', error);
-    }
+    } catch (error) { console.error(error); }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Export/Import
+// Export/Import (Updated valid keys)
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function exportSettings() {
     try {
         const settings = await chrome.storage.sync.get(null);
         const json = JSON.stringify(settings, null, 2);
-
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
+        const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
         const a = document.createElement('a');
         a.href = url;
         a.download = 'consent-breaker-settings.json';
         a.click();
-
-        URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error('Export failed:', error);
-        alert('Export mislukt');
-    }
+    } catch (error) { console.error(error); }
 }
 
 async function importSettings(event) {
     const file = event.target.files[0];
     if (!file) return;
-
     try {
-        const text = await file.text();
-        const data = JSON.parse(text);
+        const data = JSON.parse(await file.text());
+        if (typeof data !== 'object') throw new Error('Invalid format');
 
-        // Validate structure
-        if (typeof data !== 'object') {
-            throw new Error('Invalid format');
-        }
-
-        // Only import known keys
-        const validKeys = ['globalEnabled', 'debugMode', 'allowlist', 'stats'];
+        const validKeys = ['globalEnabled', 'debugMode', 'allowlist', 'stats', 'filterMode', 'perDomainOverrides'];
         const sanitized = {};
-
-        for (const key of validKeys) {
-            if (key in data) {
-                sanitized[key] = data[key];
-            }
-        }
+        for (const key of validKeys) if (key in data) sanitized[key] = data[key];
 
         await chrome.storage.sync.set(sanitized);
         await loadSettings();
-
-        alert('Instellingen geïmporteerd');
-    } catch (error) {
-        console.error('Import failed:', error);
-        alert('Import mislukt: ongeldig bestand');
-    }
-
-    // Reset file input
+        alert('Geïmporteerd');
+    } catch (error) { alert('Import mislukt'); }
     event.target.value = '';
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-function normalizeDomain(domain) {
-    return domain
-        .toLowerCase()
-        .replace(/^https?:\/\//, '')
-        .replace(/^www\./, '')
-        .replace(/\/.*$/, '')
-        .trim();
-}
-
-function isValidDomain(domain) {
-    // Simple validation: alphanumeric, dots, hyphens
-    return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/i.test(domain);
-}
-
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
+function normalizeDomain(d) { return d.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '').trim(); }
+function isValidDomain(d) { return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/i.test(d); }
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
