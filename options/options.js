@@ -1,16 +1,65 @@
 /**
  * Consent Breaker - Options Page
- * V2: Supports Advanced Settings
+ * V2.1: Neon Glass UI & Auto-save
  */
 
-document.addEventListener('DOMContentLoaded', loadSettings);
-document.getElementById('save').addEventListener('click', saveSettings);
-document.getElementById('addDomain').addEventListener('click', addDomain);
-document.getElementById('export').addEventListener('click', exportSettings);
-document.getElementById('import').addEventListener('click', () => document.getElementById('importFile').click());
-document.getElementById('importFile').addEventListener('change', importSettings);
+document.addEventListener('DOMContentLoaded', () => {
+    loadSettings();
+    initializeTabs();
+    initializeEventListeners();
+});
 
-// Load settings
+// ─────────────────────────────────────────────────────────────────────────────
+// Init & Navigation
+// ─────────────────────────────────────────────────────────────────────────────
+
+function initializeTabs() {
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active state
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+            // Add active state
+            btn.classList.add('active');
+            const target = btn.dataset.tab;
+            const section = document.getElementById(`section-${target}`);
+            if (section) section.classList.add('active');
+        });
+    });
+}
+
+function initializeEventListeners() {
+    // Auto-save on all inputs
+    const inputs = document.querySelectorAll('input[type="checkbox"], input[type="radio"]');
+    inputs.forEach(input => {
+        input.addEventListener('change', () => {
+            saveSettings();
+            // Visual feedback for radios
+            if (input.name === 'filterMode') updateModeUI();
+        });
+    });
+
+    // Domain management
+    const addBtn = document.getElementById('addDomain');
+    if (addBtn) addBtn.addEventListener('click', addDomain);
+
+    // Import/Export
+    const exportBtn = document.getElementById('export');
+    if (exportBtn) exportBtn.addEventListener('click', exportSettings);
+
+    const importBtn = document.getElementById('import');
+    if (importBtn) importBtn.addEventListener('click', () => document.getElementById('importFile').click());
+
+    const importFile = document.getElementById('importFile');
+    if (importFile) importFile.addEventListener('change', importSettings);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Settings Management
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function loadSettings() {
     const settings = await chrome.storage.sync.get({
         globalEnabled: true,
@@ -20,36 +69,38 @@ async function loadSettings() {
         advanced: { blockConsentSync: true, assumeReject: false, showLogs: false }
     });
 
-    document.getElementById('globalToggle').checked = settings.globalEnabled;
+    // Toggles
+    setCheck('globalToggle', settings.globalEnabled);
+    setCheck('blockConsentSync', settings.advanced?.blockConsentSync ?? true);
+    setCheck('assumeReject', settings.advanced?.assumeReject ?? false);
+    setCheck('showLogs', settings.advanced?.showLogs ?? false);
 
     // Mode Radio
     const modeRadio = document.querySelector(`input[name="filterMode"][value="${settings.filterMode}"]`);
     if (modeRadio) modeRadio.checked = true;
 
-    // Advanced
-    document.getElementById('blockConsentSync').checked = settings.advanced?.blockConsentSync ?? true;
-    document.getElementById('assumeReject').checked = settings.advanced?.assumeReject ?? false;
-    document.getElementById('showLogs').checked = settings.advanced?.showLogs ?? false;
-
+    // List & Stats
     renderAllowlist(settings.allowlist);
 
-    // Stats
-    document.getElementById('statBanners').textContent = settings.stats?.bannersBlocked || 0;
-    document.getElementById('statSites').textContent = settings.stats?.sitesProcessed || 0;
+    const statBanners = document.getElementById('statBanners');
+    if (statBanners) statBanners.textContent = settings.stats?.bannersBlocked || 0;
+
+    // Note: statSites removed from UI or optional? Check HTML.
 }
 
-// Save settings
 async function saveSettings() {
-    const globalEnabled = document.getElementById('globalToggle').checked;
-    const filterMode = document.querySelector('input[name="filterMode"]:checked').value;
+    const globalEnabled = getCheck('globalToggle');
+
+    const modeEl = document.querySelector('input[name="filterMode"]:checked');
+    const filterMode = modeEl ? modeEl.value : 'normal';
 
     const advanced = {
-        blockConsentSync: document.getElementById('blockConsentSync').checked,
-        assumeReject: document.getElementById('assumeReject').checked,
-        showLogs: document.getElementById('showLogs').checked
+        blockConsentSync: getCheck('blockConsentSync'),
+        assumeReject: getCheck('assumeReject'),
+        showLogs: getCheck('showLogs')
     };
 
-    // Get existing settings to preserve other fields
+    // Preserve other data
     const current = await chrome.storage.sync.get({ allowlist: [], stats: {}, perDomainOverrides: {} });
 
     await chrome.storage.sync.set({
@@ -64,12 +115,36 @@ async function saveSettings() {
     showStatus('Settings saved');
 }
 
-// Allowlist logic
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function setCheck(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.checked = val;
+}
+
+function getCheck(id) {
+    const el = document.getElementById(id);
+    return el ? el.checked : false;
+}
+
+function updateModeUI() {
+    // Optional: Add glow effect to selected card
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Allowlist Logic
+// ─────────────────────────────────────────────────────────────────────────────
+
 function renderAllowlist(list) {
     const container = document.getElementById('allowlist');
+    if (!container) return;
+
     container.innerHTML = '';
 
-    if (list.length === 0) {
+    if (!list || list.length === 0) {
         container.innerHTML = '<div class="empty-state">No domains allowed</div>';
         return;
     }
@@ -79,12 +154,13 @@ function renderAllowlist(list) {
         item.className = 'allowlist-item';
         item.innerHTML = `
       <span>${domain}</span>
-      <button class="remove-btn" data-domain="${domain}">Remove</button>
+      <span class="remove-btn" data-domain="${domain}">✕</span>
     `;
         container.appendChild(item);
     });
 
-    document.querySelectorAll('.remove-btn').forEach(btn => {
+    // Add listeners to X buttons
+    container.querySelectorAll('.remove-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const domain = e.target.dataset.domain;
             await removeDomain(domain);
@@ -94,11 +170,11 @@ function renderAllowlist(list) {
 
 async function addDomain() {
     const input = document.getElementById('newDomain');
-    let domain = input.value.trim().toLowerCase();
+    if (!input) return;
 
+    let domain = input.value.trim().toLowerCase();
     if (!domain) return;
 
-    // URL cleanup
     try {
         const url = new URL(domain.startsWith('http') ? domain : `http://${domain}`);
         domain = url.hostname;
@@ -121,7 +197,10 @@ async function removeDomain(domain) {
     renderAllowlist(updated);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Export/Import
+// ─────────────────────────────────────────────────────────────────────────────
+
 function exportSettings() {
     chrome.storage.sync.get(null, (items) => {
         const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
@@ -141,6 +220,7 @@ function importSettings(e) {
     reader.onload = async (event) => {
         try {
             const settings = JSON.parse(event.target.result);
+            // Validation could go here
             await chrome.storage.sync.set(settings);
             loadSettings();
             showStatus('Settings imported');
@@ -153,7 +233,13 @@ function importSettings(e) {
 
 function showStatus(msg, isError = false) {
     const el = document.getElementById('status');
+    if (!el) return;
+
     el.textContent = msg;
-    el.className = 'status-msg ' + (isError ? 'error' : 'visible');
-    setTimeout(() => el.className = 'status-msg', 2000);
+    el.className = 'toast ' + (isError ? 'error' : 'visible');
+
+    // Reset after 2s
+    setTimeout(() => {
+        el.className = 'toast hidden';
+    }, 2000);
 }
