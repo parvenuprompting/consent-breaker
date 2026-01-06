@@ -224,13 +224,47 @@ async function checkDomainAllowed(domain) {
   return { allowed: true };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Stats Batching (Prevents Quota Errors)
+// ─────────────────────────────────────────────────────────────────────────────
+
+let pendingStats = { bannersBlocked: 0, sitesProcessed: 0 };
+let statsFlushTimer = null;
+
 async function updateStats(data) {
+  // Accumulate in memory
+  if (data.bannerBlocked) pendingStats.bannersBlocked++;
+  if (data.siteProcessed) pendingStats.sitesProcessed++;
+
+  // Schedule flush if not running
+  if (!statsFlushTimer) {
+    statsFlushTimer = setTimeout(flushStats, 5000); // Batch for 5 seconds
+  }
+}
+
+async function flushStats() {
+  statsFlushTimer = null;
+
+  // If nothing to flush, exit
+  if (pendingStats.bannersBlocked === 0 && pendingStats.sitesProcessed === 0) return;
+
   try {
     const settings = await getSettings();
-    if (data.bannerBlocked) settings.stats.bannersBlocked++;
-    if (data.siteProcessed) settings.stats.sitesProcessed++;
+
+    // Apply accumulated deltas
+    settings.stats.bannersBlocked += pendingStats.bannersBlocked;
+    settings.stats.sitesProcessed += pendingStats.sitesProcessed;
+
+    // Reset pending BEFORE await to prevent race condition if new stats come in during save
+    pendingStats = { bannersBlocked: 0, sitesProcessed: 0 };
+
     await chrome.storage.sync.set({ stats: settings.stats });
-  } catch (error) { }
+    // console.log('[Consent Breaker] Stats flushed to storage');
+  } catch (error) {
+    if (chrome.runtime.lastError) {
+      console.warn('[Consent Breaker] Storage write failed (Quota?):', chrome.runtime.lastError);
+    }
+  }
 }
 
 const MAX_LOG_ENTRIES = 500;
