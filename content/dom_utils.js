@@ -150,14 +150,20 @@ const DOMUtils = {
 
     /**
      * Safely remove an element from the DOM.
+     * Uses element.remove() which is safer in Shadow DOM contexts.
      */
     removeElement(element) {
-        if (!element || !element.parentNode) return false;
+        if (!element) return false;
 
         try {
-            element.parentNode.removeChild(element);
+            element.remove();
             return true;
         } catch (e) {
+            // Fallback for very old browsers or edge cases
+            if (element.parentNode) {
+                element.parentNode.removeChild(element);
+                return true;
+            }
             return false;
         }
     },
